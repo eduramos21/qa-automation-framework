@@ -41,6 +41,12 @@ npx tsc --noEmit
 Point it at a different device or app with `DEVICE_NAME`, `APP_PATH` and
 `APP_ID`.
 
+The lockfile is generated with `--os=linux --cpu=x64 --os=darwin --cpu=arm64` so
+it carries the platform specific binaries for both. Without that, a lockfile made
+on a Mac makes `npm ci` fail on a Linux runner, and the error names a `sharp`
+binary rather than saying what actually went wrong. If you regenerate it, use the
+same flags.
+
 ## What is in here
 
 ```
