@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+"""Check test files against policies.forbid in qa.config.yml.
+
+Two callers:
+
+  qa-policy <file> [<file> ...]     check named files
+  qa-policy --stack web             check the whole suite for a stack
+  qa-policy --hook                  read a PostToolUse payload on stdin
+
+Exit 0 clean, 1 violations found, 2 could not run. In --hook mode violations
+exit 2 instead, because that is the code that sends the message back to the
+model to fix rather than only printing it.
+
+The checks are textual on purpose. A real parser per language would be a lot of
+code for a check whose job is to catch the obvious thing quickly, in a hook,
+before it lands. Two of the checks are heuristics and say so in their output.
+Anything subtler is the suite auditor's job, and it has a model to reason with.
+
+Stdlib only. Same reason as qa-context: this runs on the critical path.
+"""
+
+import argparse
+import importlib.machinery
+import importlib.util
+import json
+import re
+import sys
+from pathlib import Path
+
+PLUGIN_ROOT = Path(__file__).resolve().parent
+
+_loader = importlib.machinery.SourceFileLoader("qa_context", str(PLUGIN_ROOT / "qa-context"))
+_spec = importlib.util.spec_from_loader("qa_context", _loader)
+qa_context = importlib.util.module_from_spec(_spec)
+_loader.exec_module(qa_context)
+
+
+# Each rule is (name, description, finder). A finder takes the file text and
+# yields (line number, the offending line).
+def find_regex(pattern):
+    compiled = re.compile(pattern)
+
+    def finder(text):
+        for number, line in enumerate(text.splitlines(), start=1):
+            if compiled.search(line) and not is_comment(line):
+                yield number, line.strip()
+
+    return finder
+
+
+def is_comment(line):
+    stripped = line.strip()
+    return stripped.startswith(("//", "#", "*", "/*"))
+
+
+HARD_SLEEP = r"""(?x)
+    \bwait_for_timeout\s*\(
+  | \bwaitForTimeout\s*\(
+  | \btime\.sleep\s*\(
+  | \bThread\.sleep\s*\(
+  | \bimplicitly_wait\s*\(
+  | \bimplicitlyWait\s*\(
+  | \bbrowser\.pause\s*\(
+  | \bcy\.wait\s*\(\s*\d
+"""
+
+ABSOLUTE_XPATH = r"""(?x)
+    //\w+\[\d+\]
+  | \bxpath\s*[=(]\s*["']/[^/]
+"""
+
+
+def find_conditional_assertions(text):
+    """A branch with an assertion inside it, so the check can be skipped.
+
+    Heuristic. Looks for a conditional, then an assertion within the next few
+    lines at deeper indentation. It can be wrong, and says so.
+    """
+    lines = text.splitlines()
+    conditional = re.compile(r"^\s*(if|elif|else if|switch)\b|^\s*\}\s*else\b")
+    assertion = re.compile(r"\b(expect|assert|assertThat|should)\s*[.(]")
+
+    for index, line in enumerate(lines):
+        if not conditional.search(line) or is_comment(line):
+            continue
+        indent = len(line) - len(line.lstrip())
+        for follower in lines[index + 1:index + 6]:
+            if not follower.strip() or is_comment(follower):
+                continue
+            if len(follower) - len(follower.lstrip()) <= indent:
+                break
+            if assertion.search(follower):
+                yield index + 1, line.strip()
+                break
+
+
+def find_tests_without_assertions(text):
+    """A test that drives the app and never checks anything.
+
+    Heuristic. Splits on test declarations and looks for an assertion in each
+    block. Misses a test whose only assertion is inside a helper, which is a
+    pattern worth flagging anyway.
+    """
+    declaration = re.compile(
+        r"^\s*(?:async\s+)?(?:def\s+test_\w+|test\s*\(|it\s*\(|@Test\b|func\s+Test\w+)")
+    assertion = re.compile(r"\b(expect|assert|assertThat|should|verify)\s*[.(]")
+
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if declaration.search(line)]
+    for position, start in enumerate(starts):
+        end = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        block = "\n".join(lines[start:end])
+        if not assertion.search(block):
+            yield start + 1, lines[start].strip()
+
+
+def find_shared_state(text):
+    """Order dependence, or state shared between tests in a file."""
+    serial = re.compile(r"\.serial\b|@pytest\.mark\.run\(order|@TestMethodOrder")
+    module_state = re.compile(r"^(let|var)\s+\w+\s*(=|;|$)|^\s*global\s+\w+")
+    for number, line in enumerate(text.splitlines(), start=1):
+        if is_comment(line):
+            continue
+        if serial.search(line) or module_state.search(line):
+            yield number, line.strip()
+
+
+RULES = {
+    "hard_sleeps": (
+        "a fixed sleep, which hides a race instead of waiting for it",
+        find_regex(HARD_SLEEP),
+        False,
+    ),
+    "absolute_xpath": (
+        "a positional locator, which breaks on any layout change",
+        find_regex(ABSOLUTE_XPATH),
+        False,
+    ),
+    "conditional_assertions": (
+        "an assertion inside a branch, so the test can pass by skipping its check",
+        find_conditional_assertions,
+        True,
+    ),
+    "no_assertion": (
+        "a test that drives the app and never checks anything",
+        find_tests_without_assertions,
+        True,
+    ),
+    "shared_mutable_state": (
+        "state shared between tests, or an enforced order",
+        find_shared_state,
+        True,
+    ),
+}
+
+
+def forbidden_in(config_text):
+    """The policies.forbid list, read straight out of the config."""
+    match = re.search(r"^\s*forbid:\s*$((?:\n\s*-\s*\S+)+)", config_text, re.MULTILINE)
+    if match:
+        return [item.strip("- \t") for item in match.group(1).strip().splitlines()]
+    inline = re.search(r"^\s*forbid:\s*\[(.+)\]\s*$", config_text, re.MULTILINE)
+    if inline:
+        return [item.strip().strip("\"'") for item in inline.group(1).split(",")]
+    return []
+
+
+def check(paths, forbid):
+    violations = []
+    for path in paths:
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for rule in forbid:
+            if rule not in RULES:
+                continue
+            description, finder, heuristic = RULES[rule]
+            for number, line in finder(text):
+                violations.append((path, number, rule, description, line, heuristic))
+    return violations
+
+
+def report(violations):
+    if not violations:
+        return 0
+    print("policies.forbid violations:\n", file=sys.stderr)
+    for path, number, rule, description, line, heuristic in violations:
+        flag = "  (heuristic, check it)" if heuristic else ""
+        print("{}:{}: {}{}\n    {}\n    {}".format(
+            path, number, rule, flag, description, line), file=sys.stderr)
+    print("\n{} violation(s). These are house rules from qa.config.yml, not "
+          "suggestions.".format(len(violations)), file=sys.stderr)
+    return 1
+
+
+def test_files_for(stack, config, config_dir):
+    """Every test file in a stack, using the profile's layout."""
+    stacks = qa_context.stacks_in(config.read_text())
+    if stack not in stacks:
+        print("No stack '{}' in {}".format(stack, config), file=sys.stderr)
+        return None
+    profile_dir = qa_context.find_profile(stacks[stack], config_dir)
+    if profile_dir is None:
+        print("Profile '{}' not found".format(stacks[stack]), file=sys.stderr)
+        return None
+
+    profile = (profile_dir / "profile.yaml").read_text()
+    glob = re.search(r"^\s*test_glob:\s*[\"']?(\S+?)[\"']?\s*$", profile, re.MULTILINE)
+    tests = re.search(r"^\s*tests:\s*(\S+)\s*$", profile, re.MULTILINE)
+    root = re.search(
+        r"^  {}:\s*$(?:\n(?!  \S).*)*?\n\s*root:\s*(\S+)".format(re.escape(stack)),
+        config.read_text(), re.MULTILINE)
+
+    base = config_dir
+    if root:
+        base = (config_dir / root.group(1)).resolve()
+    if tests:
+        base = base / tests.group(1)
+    pattern = glob.group(1) if glob else "**/*"
+    return sorted(base.glob(pattern))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("files", nargs="*", type=Path)
+    parser.add_argument("--stack", help="check the whole suite for this stack")
+    parser.add_argument("--hook", action="store_true",
+                        help="read a PostToolUse hook payload from stdin")
+    args = parser.parse_args()
+
+    paths = list(args.files)
+
+    if args.hook:
+        try:
+            payload = json.load(sys.stdin)
+        except (json.JSONDecodeError, ValueError):
+            return 0
+        edited = (payload.get("tool_input") or {}).get("file_path")
+        if not edited:
+            return 0
+        paths = [Path(edited)]
+
+    start = paths[0].resolve().parent if paths else Path.cwd()
+    config = qa_context.find_config(start)
+    if config is None:
+        # No config means no policy to enforce. Not an error, most repos this
+        # runs in are not set up yet.
+        return 0 if args.hook else 2
+
+    forbid = forbidden_in(config.read_text())
+    if not forbid:
+        return 0
+
+    if args.stack:
+        found = test_files_for(args.stack, config, config.parent)
+        if found is None:
+            return 2
+        paths = found
+
+    if not paths:
+        return 0
+
+    found = report(check(paths, forbid))
+
+    # In hook mode, exit 2 rather than 1. That is the code that feeds stderr
+    # back to the model so it fixes the file, instead of only printing to the
+    # user and moving on.
+    if found and args.hook:
+        return 2
+    return found
+
+
+if __name__ == "__main__":
+    sys.exit(main())

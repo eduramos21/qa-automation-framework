@@ -52,8 +52,22 @@ Three of those look like one cause: the cart is trusted from the rendered page
 rather than re-read when the order is confirmed. Saying that in the report is
 worth more than the three tickets, because it turns three fixes into one.
 
-## Still to come
+## Auditing the suite that came out of it
 
-| From | Lands in |
-|---|---|
-| A suite audit report, `/qa:audit` | phase 5 |
+| File | Produced by | What it shows |
+|---|---|---|
+| `audit-2026-09-08-web-ts.md` | `/qa:audit` | Nine rubric scores with evidence, six ranked findings, the coverage gaps, and the first three things to do |
+
+The suite scores 5 on speed, isolation, waiting and assertions, and 2 on layers
+and on coverage against requirements. Both low scores come from the same place:
+eight of the thirteen design rows are unit rows, this project has no unit layer,
+so the highest risk item in the whole requirement has no test anywhere. The three
+defects the exploratory session found have no regression tests either.
+
+None of that is a hole in what was written. Every one of those rows was a
+recorded decision. The finding is that the decisions have not been acted on
+since, which is a different problem and needs a different conversation.
+
+A report normally goes to `qa/audit/<date>.md` inside the project. This one lives
+here instead so it sits next to the requirement, design, generation report and
+session sheet it refers to.
