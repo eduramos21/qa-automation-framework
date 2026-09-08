@@ -34,9 +34,26 @@ the eight unit rows that were left unwritten because this project has no unit
 layer, and the half of AC4 that could not be tested because the confirmation page
 shows no total. Both are reported rather than papered over.
 
+## Exploring the same feature
+
+| File | Produced by | What it shows |
+|---|---|---|
+| `session-2026-09-08-checkout-state.md` | `/qa:explore` | A 55 minute session against the second charter the design produced. Seven findings: three bugs, one formatting bug, two notes, one question |
+| `BUG-checkout-confirm-twice.md` | `bug-report` | The most serious of them, written up so it can be fixed without a round trip |
+
+The session was run against the live site, and the findings are real. Pressing
+the browser back button after confirming an order returns to a page with a live
+Finish button, and pressing it confirms again with nothing to say it was a
+repeat. Emptying the cart in a second tab does not stop the first tab from
+confirming. Navigating straight to the overview URL with an empty cart shows
+`Item total: $0` next to `Tax: $0.00` and lets a $0.00 order through.
+
+Three of those look like one cause: the cart is trusted from the rendered page
+rather than re-read when the order is confirmed. Saying that in the report is
+worth more than the three tickets, because it turns three fixes into one.
+
 ## Still to come
 
 | From | Lands in |
 |---|---|
-| An exploratory session sheet, `/qa:explore` | phase 4 |
 | A suite audit report, `/qa:audit` | phase 5 |

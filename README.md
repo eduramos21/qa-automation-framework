@@ -17,8 +17,8 @@ Full docs: https://eduramos21.github.io/qa-automation-framework/
 | 1 | TypeScript and Python web profiles, runnable demos | done |
 | 2 | Requirement refinement and test design | done |
 | 3 | Automated test generation | done |
-| 4 | Assisted exploratory and manual testing | in progress |
-| 5 | Test maintenance and suite auditing | todo |
+| 4 | Assisted exploratory and manual testing | done |
+| 5 | Test maintenance and suite auditing | in progress |
 | 6 | Mobile profile and Appium demo | todo |
 | 7 | Docs site | todo |
 
