@@ -1,0 +1,51 @@
+name: ts-playwright
+language: typescript
+runner: playwright
+platform: web
+
+commands:
+  install: npm ci && npx playwright install --with-deps
+  test: npx playwright test
+  test_one: npx playwright test {file} -g "{title}"
+  test_tagged: npx playwright test --grep "{tag}"
+  lint: npx tsc --noEmit && npx eslint {file}
+  report: npx playwright show-report
+
+layout:
+  tests: tests/
+  test_glob: "**/*.spec.ts"
+  pages: pages/
+  fixtures: fixtures/
+  data: data/
+
+templates:
+  test: templates/test.spec.ts.tmpl
+  page_object: templates/page-object.ts.tmpl
+
+# Playwright's own recommended order. getByRole first because it fails when the
+# page stops being accessible, which is a bug worth catching.
+selector_priority:
+  - getByRole
+  - getByLabel
+  - getByPlaceholder
+  - getByTestId
+  - getByText
+  - locator
+
+ci:
+  github-actions: ci/github-actions.yml
+  jenkins: ci/Jenkinsfile
+
+notes: |
+  Set testIdAttribute in playwright.config.ts to match policies.test_id_attribute
+  in qa.config.yml, otherwise getByTestId looks for the wrong attribute and every
+  generated locator misses.
+
+  Auth state goes through a setup project writing storageState to .auth/, not
+  through a beforeEach that logs in again for every test. Logging in once per
+  worker is the difference between a two minute suite and a ten minute one.
+
+  Playwright assertions in the expect(locator) family auto retry until the
+  timeout. Assertions on plain values do not. If a check is flaky, the usual
+  cause is asserting on a value pulled out of the page with await instead of
+  asserting on the locator.

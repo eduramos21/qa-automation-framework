@@ -1,0 +1,48 @@
+name: py-pytest-playwright
+language: python
+runner: pytest
+platform: web
+
+commands:
+  install: pip install -r requirements.txt && playwright install --with-deps
+  test: pytest
+  test_one: pytest {file} -k "{title}"
+  test_tagged: pytest -m "{tag}"
+  lint: ruff check {file}
+
+layout:
+  tests: tests/
+  test_glob: "**/test_*.py"
+  pages: pages/
+  fixtures: conftest.py
+  data: data/
+
+templates:
+  test: templates/test_feature.py.tmpl
+  page_object: templates/page_object.py.tmpl
+
+selector_priority:
+  - get_by_role
+  - get_by_label
+  - get_by_placeholder
+  - get_by_test_id
+  - get_by_text
+  - locator
+
+ci:
+  github-actions: ci/github-actions.yml
+  jenkins: ci/Jenkinsfile
+
+notes: |
+  This is pytest-playwright, the official plugin. It gives you a function scoped
+  page fixture, so a test that takes page gets a fresh browser context.
+
+  Set the test id attribute in conftest.py with a browser_context_args or a
+  playwright fixture override so it matches policies.test_id_attribute in
+  qa.config.yml. The plugin defaults to data-testid.
+
+  There is no report command on purpose. Run with --tracing=retain-on-failure
+  and open a failure with: playwright show-trace test-results/<test>/trace.zip
+
+  Parallelism comes from pytest-xdist, pytest -n auto. Tests must not share
+  state for that to be safe, which is the rule anyway.

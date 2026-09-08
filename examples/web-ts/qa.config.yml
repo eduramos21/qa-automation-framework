@@ -1,0 +1,36 @@
+# This example project is its own root, so paths below are relative to
+# examples/web-ts/.
+project:
+  name: saucedemo-web-ts
+
+stacks:
+  web:
+    profile: ts-playwright
+    root: .
+    base_url_env: BASE_URL
+
+ci:
+  provider: github-actions
+  path: ../../.github/workflows/demo-web.yml
+
+tracker:
+  provider: none
+
+requirements:
+  source: markdown
+  path: ../artifacts/
+
+reporting:
+  artifacts: test-results/
+
+policies:
+  # saucedemo tags with data-test, so playwright.config.ts sets testIdAttribute
+  # to match. When these two drift, every getByTestId quietly misses.
+  test_id_attribute: data-test
+  max_test_runtime_s: 30
+  forbid:
+    - hard_sleeps
+    - absolute_xpath
+    - conditional_assertions
+    - shared_mutable_state
+    - no_assertion

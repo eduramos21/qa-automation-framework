@@ -1,0 +1,13 @@
+"""{{suite_docstring}}"""
+
+from pages.{{page_module}} import {{page_class}}
+
+
+def test_{{test_name}}(page):
+    {{page_var}} = {{page_class}}(page)
+
+    {{page_var}}.{{arrange}}
+
+    {{page_var}}.{{act}}
+
+    expect({{assertion_target}}).{{assertion}}

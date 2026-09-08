@@ -1,0 +1,9 @@
+from playwright.sync_api import Locator, Page
+
+
+class {{class_name}}:
+    def __init__(self, page: Page) -> None:
+        self.page = page
+        {{locator_assignments}}
+
+    {{actions}}

@@ -1,0 +1,14 @@
+import { test, expect } from '{{fixtures_import}}';
+import { {{page_object}} } from '../pages/{{page_object_file}}';
+
+test.describe('{{suite_name}}', () => {
+  test('{{test_title}}', async ({ page }) => {
+    const {{page_var}} = new {{page_object}}(page);
+
+    await {{page_var}}.{{arrange}};
+
+    await {{page_var}}.{{act}};
+
+    await expect({{assertion_target}}).{{assertion}};
+  });
+});

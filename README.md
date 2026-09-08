@@ -14,13 +14,25 @@ Full docs: https://eduramos21.github.io/qa-automation-framework/
 | Phase | What | State |
 |---|---|---|
 | 0 | Skeleton, config contract, profile template, validator | done |
-| 1 | TypeScript and Python web profiles, runnable demos | in progress |
-| 2 | Requirement refinement and test design agents | todo |
+| 1 | TypeScript and Python web profiles, runnable demos | done |
+| 2 | Requirement refinement and test design agents | in progress |
 | 3 | Automated test generation | todo |
 | 4 | Assisted exploratory and manual testing | todo |
 | 5 | Test maintenance and suite auditing | todo |
 | 6 | Mobile profile and Appium demo | todo |
 | 7 | Docs site | todo |
+
+## Try the demos
+
+Both run against saucedemo.com, so they need no setup and no credentials.
+
+```bash
+cd examples/web-ts && npm ci && npx playwright install chromium && npx playwright test
+cd examples/web-python && pip install -r requirements.txt && playwright install chromium && pytest
+```
+
+Same five behaviours, two stacks, one set of agents. That is what the profile
+system buys.
 
 ## License
 

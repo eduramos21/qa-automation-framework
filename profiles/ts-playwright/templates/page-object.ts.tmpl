@@ -1,0 +1,13 @@
+import { type Page, type Locator } from '@playwright/test';
+
+export class {{class_name}} {
+  private readonly page: Page;
+  {{locator_fields}}
+
+  constructor(page: Page) {
+    this.page = page;
+    {{locator_assignments}}
+  }
+
+  {{actions}}
+}

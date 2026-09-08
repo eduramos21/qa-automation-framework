@@ -31,15 +31,16 @@ stacks:
     # Name of the env var holding the base URL. The agents never hardcode URLs.
     base_url_env: BASE_URL
 
-  mobile:
-    profile: mobile-appium-wdio
-    root: mobile-e2e/
-    platforms: [android, ios]
-
-    # App under test. Path or a build artifact URL, per platform.
-    app:
-      android: builds/app-debug.apk
-      ios: builds/App.app
+  # Mobile lands in phase 6. Uncomment once profiles/mobile-appium-wdio exists.
+  # mobile:
+  #   profile: mobile-appium-wdio
+  #   root: mobile-e2e/
+  #   platforms: [android, ios]
+  #
+  #   # App under test. Path or a build artifact URL, per platform.
+  #   app:
+  #     android: builds/app-debug.apk
+  #     ios: builds/App.app
 
 ci:
   # github-actions | gitlab-ci | jenkins | circleci | none

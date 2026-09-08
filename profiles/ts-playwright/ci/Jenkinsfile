@@ -1,0 +1,53 @@
+// Copied into a project by /qa:init when ci.provider is jenkins.
+// Same job as the GitHub Actions file. Adjust E2E_DIR to match
+// stacks.web.root in qa.config.yml.
+pipeline {
+  agent {
+    docker {
+      image 'mcr.microsoft.com/playwright:v1.49.0-noble'
+      args '--ipc=host'
+    }
+  }
+
+  environment {
+    E2E_DIR  = 'e2e'
+    BASE_URL = credentials('e2e-base-url')
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('install') {
+      steps {
+        dir(env.E2E_DIR) {
+          sh 'npm ci'
+        }
+      }
+    }
+
+    stage('test') {
+      steps {
+        dir(env.E2E_DIR) {
+          sh 'npx playwright test --forbid-only'
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      publishHTML(target: [
+        reportDir:   "${env.E2E_DIR}/playwright-report",
+        reportFiles: 'index.html',
+        reportName:  'Playwright report',
+        keepAll:      true,
+        allowMissing: true,
+        alwaysLinkToLastBuild: true
+      ])
+      archiveArtifacts artifacts: "${env.E2E_DIR}/test-results/**", allowEmptyArchive: true
+    }
+  }
+}

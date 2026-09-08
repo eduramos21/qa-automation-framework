@@ -1,0 +1,74 @@
+# Runs both web demos for real, against saucedemo.com. If this is green, the
+# profiles and the examples actually work rather than just describing a stack.
+name: demo-web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # saucedemo is a third party. A weekly run catches it changing under us
+    # before someone clones the repo and hits a red suite.
+    - cron: "0 6 * * 1"
+
+jobs:
+  typescript:
+    name: examples/web-ts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/web-ts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: examples/web-ts/package-lock.json
+
+      - run: npm ci
+
+      - run: npx tsc --noEmit
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx playwright test --forbid-only
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: web-ts-report
+          path: examples/web-ts/playwright-report/
+          retention-days: 7
+
+  python:
+    name: examples/web-python
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/web-python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: examples/web-python/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - run: playwright install --with-deps chromium
+
+      - run: pytest -n auto --tracing=retain-on-failure
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: web-python-traces
+          path: examples/web-python/test-results/
+          retention-days: 7

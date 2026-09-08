@@ -1,0 +1,45 @@
+// Copied into a project by /qa:init when ci.provider is jenkins.
+// Adjust E2E_DIR to match stacks.web.root in qa.config.yml.
+pipeline {
+  agent {
+    docker {
+      image 'mcr.microsoft.com/playwright/python:v1.49.0-noble'
+      args '--ipc=host'
+    }
+  }
+
+  environment {
+    E2E_DIR  = 'e2e'
+    BASE_URL = credentials('e2e-base-url')
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('install') {
+      steps {
+        dir(env.E2E_DIR) {
+          sh 'pip install -r requirements.txt'
+        }
+      }
+    }
+
+    stage('test') {
+      steps {
+        dir(env.E2E_DIR) {
+          sh 'pytest -n auto --tracing=retain-on-failure --junit-xml=test-results/junit.xml'
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      junit allowEmptyResults: true, testResults: "${env.E2E_DIR}/test-results/junit.xml"
+      archiveArtifacts artifacts: "${env.E2E_DIR}/test-results/**", allowEmptyArchive: true
+    }
+  }
+}

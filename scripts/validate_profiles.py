@@ -93,22 +93,37 @@ def check_profile(directory, problems):
         fail("no CONVENTIONS.md, the author agent has nothing to imitate")
 
 
-def check_example_config(problems, known):
-    example = ROOT / "qa.config.example.yml"
-    if not example.exists():
-        problems.append("qa.config.example.yml is missing")
-        return
+SKIP_DIRS = {"node_modules", ".venv", "venv", ".git", "test-results"}
+
+
+def find_configs():
+    """Every qa.config.yml and qa.config.example.yml in the repo."""
+    for path in ROOT.rglob("qa.config*.yml"):
+        if SKIP_DIRS.isdisjoint(part for part in path.parts):
+            yield path
+
+
+def check_config(path, problems, known):
+    rel = path.relative_to(ROOT)
     try:
-        config = load(example)
+        config = load(path)
     except yaml.YAMLError as exc:
-        problems.append("qa.config.example.yml does not parse: {}".format(exc))
+        problems.append("{} does not parse: {}".format(rel, exc))
         return
-    for stack, settings in (config.get("stacks") or {}).items():
+
+    stacks = (config or {}).get("stacks") or {}
+    if not stacks:
+        problems.append("{} declares no stacks".format(rel))
+        return
+
+    for stack, settings in stacks.items():
         name = (settings or {}).get("profile")
-        if name not in known:
+        if not name:
+            problems.append("{} stacks.{} has no profile".format(rel, stack))
+        elif name not in known:
             problems.append(
-                "qa.config.example.yml stacks.{} points at profile '{}' which "
-                "does not exist".format(stack, name))
+                "{} stacks.{} points at profile '{}' which does not exist"
+                .format(rel, stack, name))
 
 
 def main():
@@ -127,7 +142,12 @@ def main():
     for directory in directories:
         check_profile(directory, problems)
 
-    check_example_config(problems, {d.name for d in directories})
+    known = {d.name for d in directories}
+    configs = sorted(find_configs())
+    if not configs:
+        problems.append("no qa.config*.yml found anywhere in the repo")
+    for config in configs:
+        check_config(config, problems, known)
 
     if problems:
         print("Found {} problem(s):\n".format(len(problems)))
@@ -137,6 +157,8 @@ def main():
 
     print("{} profile(s) OK: {}".format(
         len(directories), ", ".join(d.name for d in directories) or "none"))
+    print("{} config(s) OK: {}".format(
+        len(configs), ", ".join(str(c.relative_to(ROOT)) for c in configs)))
     return 0
 
 
