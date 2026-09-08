@@ -1,5 +1,6 @@
 {
   "name": "eduramos21-qa",
+  "description": "QA tooling for Claude Code. Agents and skills for requirement refinement, test design, exploratory testing, test generation, maintenance and suite auditing, on web and native mobile.",
   "owner": {
     "name": "Eduardo Ramos",
     "url": "https://github.com/eduramos21"
