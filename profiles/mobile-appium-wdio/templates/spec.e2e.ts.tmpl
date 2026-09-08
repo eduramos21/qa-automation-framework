@@ -1,0 +1,18 @@
+import { {{screen_object}} } from '../screens/{{screen_file}}';
+
+describe('{{suite_name}}', () => {
+  beforeEach(async () => {
+    // The app is reset between tests, not the session. Starting a session
+    // costs 10 to 30 seconds and doing it per test is what makes a mobile
+    // suite take an hour.
+    await driver.execute('mobile: clearApp', { appId: '{{app_id}}' });
+  });
+
+  it('{{test_title}}', async () => {
+    await {{screen_var}}.{{arrange}};
+
+    await {{screen_var}}.{{act}};
+
+    await expect({{assertion_target}}).{{assertion}};
+  });
+});

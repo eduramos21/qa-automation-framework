@@ -105,11 +105,13 @@ print("  ok   no forbid block")
 print("\nthe shipped suites stay clean:")
 for config in sorted(ROOT.glob("examples/*/qa.config.yml")):
     forbid = qa_policy.forbidden_in(config.read_text())
-    tests = qa_policy.test_files_for("web", config, config.parent)
-    assert tests, "found no test files for {}".format(config)
-    violations = qa_policy.check(tests, forbid)
-    assert not violations, "{}: {}".format(config, violations)
-    print("  ok   {} files under {}".format(len(tests), config.parent.name))
+    for stack in qa_policy.qa_context.stacks_in(config.read_text()):
+        tests = qa_policy.test_files_for(stack, config, config.parent)
+        assert tests, "found no test files for {} stack {}".format(config, stack)
+        violations = qa_policy.check(tests, forbid)
+        assert not violations, "{}: {}".format(config, violations)
+        print("  ok   {} files under {} ({})".format(
+            len(tests), config.parent.name, stack))
 
 if failures:
     print("\n{} failure(s)".format(len(failures)))

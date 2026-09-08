@@ -1,0 +1,49 @@
+// Copied into a project by /qa:init when ci.provider is jenkins.
+//
+// Assumes an agent labelled 'android' that already has the SDK, an emulator or
+// a connected device, and Appium installed. Mobile CI is mostly about owning
+// that agent, and no pipeline file makes that part go away.
+pipeline {
+  agent { label 'android' }
+
+  environment {
+    E2E_DIR = 'mobile-e2e'
+  }
+
+  options {
+    timeout(time: 60, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  triggers {
+    cron('H 3 * * *')
+  }
+
+  stages {
+    stage('install') {
+      steps {
+        dir(env.E2E_DIR) { sh 'npm ci' }
+      }
+    }
+
+    stage('device') {
+      steps {
+        sh 'adb devices'
+        sh 'adb wait-for-device'
+      }
+    }
+
+    stage('test') {
+      steps {
+        dir(env.E2E_DIR) { sh 'npx wdio run wdio.conf.ts' }
+      }
+    }
+  }
+
+  post {
+    always {
+      junit allowEmptyResults: true, testResults: "${env.E2E_DIR}/reports/*.xml"
+      archiveArtifacts artifacts: "${env.E2E_DIR}/reports/**", allowEmptyArchive: true
+    }
+  }
+}

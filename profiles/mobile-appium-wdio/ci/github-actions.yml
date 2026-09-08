@@ -1,0 +1,60 @@
+# Copied into a project by /qa:init when ci.provider is github-actions.
+#
+# This one needs a device. A stock GitHub runner has none, so pick one:
+#
+#   1. A self hosted runner with an emulator, which is what this file shows
+#   2. A device cloud, in which case replace the emulator step with that
+#      provider's action and point the capabilities at their endpoint
+#
+# Android on a hosted runner works through reactivecircus/android-emulator-runner
+# and is slow but real. iOS needs a macOS runner and a simulator.
+name: mobile-e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mobile suites are usually too slow for every commit. Nightly plus manual
+    # is the normal shape. Move it to pull_request when it is fast enough.
+    - cron: "0 3 * * *"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile-e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile-e2e/package-lock.json
+
+      - run: npm ci
+
+      - name: build or download the app under test
+        run: echo "Replace with the build step, or download the artifact"
+
+      - name: enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          working-directory: mobile-e2e
+          script: npx wdio run wdio.conf.ts
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: mobile-e2e-report
+          path: mobile-e2e/reports/
+          retention-days: 14

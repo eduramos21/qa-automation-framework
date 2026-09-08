@@ -1,0 +1,40 @@
+# This example project is its own root, so paths below are relative to
+# examples/mobile-appium/.
+project:
+  name: apidemos-mobile
+
+stacks:
+  mobile:
+    profile: mobile-appium-wdio
+    root: .
+    platforms: [android]
+    app:
+      android: app/ApiDemos-debug.apk
+
+ci:
+  # Not wired into this repo's CI. A mobile run needs a device, and there is no
+  # device on a stock GitHub runner. profiles/mobile-appium-wdio/ci/ has a
+  # workflow for a self hosted runner with an emulator.
+  provider: none
+
+tracker:
+  provider: none
+
+requirements:
+  source: markdown
+  path: ../artifacts/
+
+reporting:
+  artifacts: reports/
+
+policies:
+  # Appium's accessibility id selector. The mobile equivalent of a test id, and
+  # the one selector that means the same thing on both platforms.
+  test_id_attribute: content-desc
+  max_test_runtime_s: 90
+  forbid:
+    - hard_sleeps
+    - absolute_xpath
+    - conditional_assertions
+    - shared_mutable_state
+    - no_assertion

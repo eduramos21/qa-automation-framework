@@ -19,8 +19,8 @@ Full docs: https://eduramos21.github.io/qa-automation-framework/
 | 3 | Automated test generation | done |
 | 4 | Assisted exploratory and manual testing | done |
 | 5 | Test maintenance and suite auditing | done |
-| 6 | Mobile profile and Appium demo | in progress |
-| 7 | Docs site | todo |
+| 6 | Mobile profile and Appium demo | done |
+| 7 | Docs site | in progress |
 
 ## Try the demos
 

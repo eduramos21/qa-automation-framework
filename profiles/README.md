@@ -48,7 +48,7 @@ profiles/<name>/
 |---|---|---|---|---|
 | `ts-playwright` | TypeScript | Playwright | web | working, demo in `examples/web-ts` |
 | `py-pytest-playwright` | Python | pytest + Playwright | web | working, demo in `examples/web-python` |
-| `mobile-appium-wdio` | TypeScript | WebdriverIO + Appium | mobile | lands in phase 6 |
+| `mobile-appium-wdio` | TypeScript | WebdriverIO + Appium | mobile | working, demo in `examples/mobile-appium`, typechecked in CI but not run there |
 | `_template` | any | any | any | blank starting point |
 
 Java plus Selenium plus JUnit 5 is deliberately not here. It is the obvious next

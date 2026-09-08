@@ -82,8 +82,17 @@ check("no stacks block", "project:\n  name: shop\n", {})
 
 # The configs that actually ship have to survive it too.
 print("shipped configs:")
+expected = {
+    "examples/web-ts/qa.config.yml": {"web": "ts-playwright"},
+    "examples/web-python/qa.config.yml": {"web": "py-pytest-playwright"},
+    "examples/mobile-appium/qa.config.yml": {"mobile": "mobile-appium-wdio"},
+}
 for config in sorted(ROOT.glob("examples/*/qa.config.yml")):
     found = stacks_in(config.read_text())
+    key = str(config.relative_to(ROOT))
+    if key in expected:
+        assert found == expected[key], "{}: expected {}, got {}".format(
+            key, expected[key], found)
     assert found, "{} parsed to no stacks".format(config)
     print("  ok  {} -> {}".format(config.relative_to(ROOT), found))
 

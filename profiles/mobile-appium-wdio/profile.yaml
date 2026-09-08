@@ -1,0 +1,54 @@
+name: mobile-appium-wdio
+language: typescript
+runner: appium
+platform: mobile
+
+commands:
+  install: npm ci
+  test: npx wdio run wdio.conf.ts
+  test_one: npx wdio run wdio.conf.ts --spec {file} --mochaOpts.grep "{title}"
+  test_tagged: npx wdio run wdio.conf.ts --mochaOpts.grep "{tag}"
+  lint: npx tsc --noEmit
+
+layout:
+  tests: test/specs/
+  test_glob: "**/*.e2e.ts"
+  pages: test/screens/
+  fixtures: test/helpers/
+  data: test/data/
+
+templates:
+  test: templates/spec.e2e.ts.tmpl
+  page_object: templates/screen.ts.tmpl
+
+# Accessibility id first because it is the one selector that means the same
+# thing on both platforms, and because an element without one is usually an
+# element a screen reader cannot reach either. Finding that is worth more than
+# the test.
+selector_priority:
+  - accessibility_id
+  - android_uiautomator_or_ios_predicate
+  - class_chain
+  - xpath
+
+ci:
+  github-actions: ci/github-actions.yml
+  jenkins: ci/Jenkinsfile
+
+notes: |
+  Needs an Appium server and a device or emulator. There is no way around that,
+  which is why this profile's CI template targets a self hosted runner or a
+  device cloud rather than a plain GitHub runner.
+
+  Starting a session costs 10 to 30 seconds. That dominates everything, so the
+  rule that matters most here is one session for the whole run and app state
+  reset between tests, not a fresh session per test. WebdriverIO does this by
+  default, do not turn it off.
+
+  Platform differences belong in the screen objects, behind one method, not in
+  the specs. A spec with an if on platform in it is two specs pretending to be
+  one.
+
+  driver.pause() exists and is the mobile equivalent of a fixed sleep. Use
+  waitForDisplayed and waitUntil instead. The temptation is stronger here than
+  on web because animations are real, and the fix is still a condition.

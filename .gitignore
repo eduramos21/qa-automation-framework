@@ -13,3 +13,6 @@ allure-report/
 qa/sessions/*.local.md
 .DS_Store
 .auth/
+examples/mobile-appium/app/*.apk
+examples/mobile-appium/app/*.app
+reports/

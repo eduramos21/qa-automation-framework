@@ -1,0 +1,15 @@
+import { $, type ChainablePromiseElement } from '@wdio/globals';
+
+/**
+ * {{screen_description}}
+ *
+ * Platform differences live here, behind one method. A spec should never branch
+ * on driver.isAndroid.
+ */
+class {{class_name}} {
+  {{locator_getters}}
+
+  {{actions}}
+}
+
+export const {{instance_name}} = new {{class_name}}();

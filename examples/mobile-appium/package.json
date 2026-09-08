@@ -1,0 +1,22 @@
+{
+  "name": "qa-framework-example-mobile-appium",
+  "private": true,
+  "description": "WebdriverIO plus Appium demo built to the mobile-appium-wdio profile. Runs against an Android emulator, locally.",
+  "scripts": {
+    "test": "wdio run wdio.conf.ts",
+    "typecheck": "tsc --noEmit",
+    "app": "curl -L -o app/ApiDemos-debug.apk https://github.com/appium/android-apidemos/releases/download/v6.0.0/ApiDemos-debug.apk"
+  },
+  "devDependencies": {
+    "@wdio/appium-service": "^9.4.0",
+    "@wdio/cli": "^9.4.0",
+    "@wdio/globals": "^9.4.0",
+    "@wdio/local-runner": "^9.4.0",
+    "@wdio/mocha-framework": "^9.4.0",
+    "@wdio/spec-reporter": "^9.4.0",
+    "appium": "^2.12.0",
+    "appium-uiautomator2-driver": "^3.9.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}

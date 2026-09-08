@@ -20,6 +20,25 @@ jobs:
       - run: python3 scripts/test_qa_context.py
       - run: python3 scripts/test_qa_policy.py
 
+  mobile-types:
+    name: examples/mobile-appium typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: examples/mobile-appium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: examples/mobile-appium/package-lock.json
+      - run: npm ci
+      # The suite needs a device, and there is no device on a GitHub runner. The
+      # types do not, so at least the code is checked rather than nothing.
+      - run: npx tsc --noEmit
+
   manifests:
     name: json manifests
     runs-on: ubuntu-latest
