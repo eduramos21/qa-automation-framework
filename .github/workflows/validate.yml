@@ -34,7 +34,14 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: examples/mobile-appium/package-lock.json
-      - run: npm ci
+
+      # npm install, not npm ci. Appium pulls in sharp, whose per platform
+      # binaries npm resolves differently depending on where the lockfile was
+      # written, so npm ci fails here with a Missing from lock file error naming
+      # a sharp package. Not worth fighting for a job whose only output is a
+      # typecheck. The lockfile is still there for local installs.
+      - run: npm install --no-audit --no-fund
+
       # The suite needs a device, and there is no device on a GitHub runner. The
       # types do not, so at least the code is checked rather than nothing.
       - run: npx tsc --noEmit

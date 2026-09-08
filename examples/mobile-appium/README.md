@@ -41,11 +41,12 @@ npx tsc --noEmit
 Point it at a different device or app with `DEVICE_NAME`, `APP_PATH` and
 `APP_ID`.
 
-The lockfile is generated with `--os=linux --cpu=x64 --os=darwin --cpu=arm64` so
-it carries the platform specific binaries for both. Without that, a lockfile made
-on a Mac makes `npm ci` fail on a Linux runner, and the error names a `sharp`
-binary rather than saying what actually went wrong. If you regenerate it, use the
-same flags.
+One wrinkle if you touch the dependencies: Appium pulls in `sharp`, and npm
+resolves its per platform binaries differently depending on the machine the
+lockfile was written on. A lockfile written on a Mac makes `npm ci` fail on a
+Linux runner with a `Missing ... from lock file` error naming a `sharp` package,
+which tells you nothing about the real cause. The CI typecheck uses
+`npm install` rather than `npm ci` for that reason. Locally, `npm ci` is fine.
 
 ## What is in here
 
