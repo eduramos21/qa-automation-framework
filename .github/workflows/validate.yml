@@ -19,6 +19,7 @@ jobs:
       - run: python3 scripts/validate_profiles.py
       - run: python3 scripts/test_qa_context.py
       - run: python3 scripts/test_qa_policy.py
+      - run: python3 scripts/test_docs_links.py
 
   mobile-types:
     name: examples/mobile-appium typecheck

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>qa-automation-framework</title>
+<meta name="description" content="A skeleton for wiring AI agents into a real test automation stack, web and native mobile. Stack agnostic, driven by one config file and per-stack profiles.">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <nav class="nav" aria-label="Main">
+    <a class="nav__brand" href="./">qa-automation-framework</a>
+    <ul class="nav__menu">
+      <li><a href="#what">What it is</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#workflows">Workflows</a></li>
+      <li><a href="#walkthrough">Walkthrough</a></li>
+      <li><a href="reference.html">Reference</a></li>
+      <li><a href="https://github.com/eduramos21/qa-automation-framework">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+<div class="hero">
+  <h1>A skeleton for putting AI agents into a real test stack</h1>
+  <p>Web and native mobile. It ships the agents, the skills they use, and the wiring that lets them work against whatever language, runner, CI and tracker a project already picked.</p>
+  <p>The hard part is keeping the agents stack agnostic while still letting them write code that fits the repo. One config file and a profile system solve that. Adding Java plus Selenium means writing four files and changing zero agents.</p>
+</div>
+
+<section class="section" id="what">
+  <h2>What it is</h2>
+  <div class="prose">
+    <p>Five QA workflows, working against one project:</p>
+    <ul>
+      <li>Requirement refinement and test design</li>
+      <li>Assisted exploratory and manual testing</li>
+      <li>Automated test generation</li>
+      <li>Test maintenance and refactoring</li>
+      <li>Quality auditing of automation suites</li>
+    </ul>
+    <p>It is a scaffold you drop into a project, point at that project's stack, and use. It is not a test suite for one product, and it is not tied to a runner.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Stack agnostic</h3>
+      <p>Agents read <code>qa.config.yml</code> and the active profile before doing anything. Nothing hardcodes Playwright, pytest or a CI provider.</p>
+    </div>
+    <div class="card">
+      <h3>Runs for real</h3>
+      <p>Two demo suites go green against a public site in CI. The examples in the docs execute rather than describe.</p>
+    </div>
+    <div class="card">
+      <h3>Says what it did not do</h3>
+      <p>Every workflow reports what it skipped and why. A design that covers everything and an audit that finds nothing are both wrong.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <h2>How it works</h2>
+  <p class="lede">Two layers with one contract between them.</p>
+
+  <div class="prose">
+    <p><strong>The AI layer</strong>, <code>agents/</code> and <code>skills/</code>, knows QA. It knows nothing about Playwright or pytest.</p>
+    <p><strong>The profile layer</strong>, <code>profiles/&lt;name&gt;/</code>, knows one stack. How to run it, where files go, what good code looks like there. No QA reasoning in it at all.</p>
+    <p><strong>The contract</strong> is <code>qa.config.yml</code> at the project root, plus a <code>profile.yaml</code> in each profile.</p>
+  </div>
+
+  <pre><code># qa.config.yml
+stacks:
+  web:
+    profile: ts-playwright
+    root: e2e/
+    base_url_env: BASE_URL
+
+ci:
+  provider: github-actions      # github-actions | gitlab-ci | jenkins
+
+tracker:
+  provider: jira                # jira | github-issues | none
+  project_key: SHOP
+
+policies:
+  test_id_attribute: data-testid
+  max_test_runtime_s: 60
+  forbid: [hard_sleeps, absolute_xpath, conditional_assertions]</code></pre>
+
+  <pre><code># profiles/ts-playwright/profile.yaml
+commands:
+  install: npm ci &amp;&amp; npx playwright install --with-deps
+  test: npx playwright test
+  test_one: npx playwright test {file} -g "{title}"
+layout:
+  tests: tests/
+  test_glob: "**/*.spec.ts"
+selector_priority: [getByRole, getByLabel, getByTestId, getByText]</code></pre>
+
+  <div class="prose">
+    <p>When an agent needs to rerun one test it reads <code>commands.test_one</code>. When it needs to write a page object it reads the template and <code>CONVENTIONS.md</code>. That is the whole trick, and it is why the framework is open on language, runner and CI.</p>
+    <p>One command gives an agent all of it:</p>
+  </div>
+
+  <pre><code>$ qa-context web
+config:       /repo/qa.config.yml
+project root: /repo
+web:          ts-playwright -&gt; /plugin/profiles/ts-playwright
+
+===== /repo/qa.config.yml =====
+...
+===== /plugin/profiles/ts-playwright/profile.yaml =====
+...
+conventions for web: /plugin/profiles/ts-playwright/CONVENTIONS.md</code></pre>
+
+  <div class="note">
+    Project profiles win over the ones that ship with the plugin. A project that needs a tweak forks one profile, not the whole thing.
+  </div>
+</section>
+
+<section class="section" id="install">
+  <h2>Install</h2>
+
+  <div class="prose"><p>As a Claude Code plugin:</p></div>
+  <pre><code>/plugin marketplace add eduramos21/qa-automation-framework
+/plugin install qa@eduramos21-qa</code></pre>
+
+  <div class="prose"><p>Then, in a project:</p></div>
+  <pre><code>/qa:init</code></pre>
+
+  <div class="prose">
+    <p>That works out the language, runner and CI from the repo, asks about what it cannot see, writes <code>qa.config.yml</code>, and drops in a pipeline file. It describes what the project already does rather than prescribing what it should, so the config is true on day one.</p>
+    <p>To try it without installing:</p>
+  </div>
+  <pre><code>git clone https://github.com/eduramos21/qa-automation-framework
+cd qa-automation-framework
+claude --plugin-dir .</code></pre>
+
+  <div class="prose"><p>Or run the demo suites, which need no setup and no credentials:</p></div>
+  <pre><code>cd examples/web-ts
+npm ci &amp;&amp; npx playwright install chromium &amp;&amp; npx playwright test
+# 9 passed (2.6s)</code></pre>
+</section>
+
+<section class="section" id="workflows">
+  <h2>The five workflows</h2>
+  <p class="lede">Each is a skill. The three that read a lot of files hand off to an agent, so the reading stays out of the conversation.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Command</th><th>Does</th><th>Produces</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>/qa:refine</code></td>
+        <td>Turns a ticket into testable acceptance criteria, an ambiguity list and a risk table. Asks the questions that need a human</td>
+        <td><code>qa/requirements/&lt;id&gt;.md</code></td>
+      </tr>
+      <tr>
+        <td><code>/qa:design</code></td>
+        <td>Risk scored coverage matrix. What to check, at which layer, what to automate, what not to cover</td>
+        <td><code>qa/design/&lt;id&gt;.md</code></td>
+      </tr>
+      <tr>
+        <td><code>/qa:explore</code></td>
+        <td>Session based exploratory testing in a real browser or on a device, through MCP. Keeps the session sheet</td>
+        <td><code>qa/sessions/&lt;date&gt;-&lt;charter&gt;.md</code></td>
+      </tr>
+      <tr>
+        <td><code>/qa:generate</code></td>
+        <td>Writes tests in the active profile's style. Runs them, then breaks them on purpose to prove they can fail</td>
+        <td>test files, plus a report on what it did not write</td>
+      </tr>
+      <tr>
+        <td><code>/qa:fix</code></td>
+        <td>Triages a red test through five causes before changing anything, then fixes the cause once</td>
+        <td>edits, plus what it found and did not fix</td>
+      </tr>
+      <tr>
+        <td><code>/qa:audit</code></td>
+        <td>Scores a suite against a nine area rubric with evidence, and ranks findings by cost over effort</td>
+        <td><code>qa/audit/&lt;date&gt;.md</code></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="prose">
+    <p>Full catalog of agents, skills and what each one refuses to do is in the <a href="reference.html">reference</a>.</p>
+  </div>
+</section>
+
+<section class="section" id="walkthrough">
+  <h2>A worked example</h2>
+  <p class="lede">One ticket, all the way through, against the same public demo site the test suites run on. Every artifact below is committed in <code>examples/artifacts/</code>, and the numbers were checked against the running site rather than assumed.</p>
+
+  <h3>The ticket, as written</h3>
+  <div class="prose">
+    <p>"The checkout overview page should show the item total, the tax and the final total. Tax is 8%." Three acceptance criteria, one of which is "tax is calculated correctly". A developer commented that it should be quick.</p>
+  </div>
+
+  <h4>1. <code>/qa:refine</code></h4>
+  <div class="prose">
+    <p>Five acceptance criteria, a decision table, a risk table and five open questions. Two of those questions are the reason the story was not ready to build:</p>
+    <ul>
+      <li>Round half up, half even, or truncate? The ticket says "correctly", which is exactly the ambiguity the story turns on.</li>
+      <li>Does the total add the displayed tax or the raw one? These differ by a cent on some carts.</li>
+    </ul>
+    <p>Three developers would pick three answers and all three would satisfy "calculated correctly". One cent per order, nobody reports it, finance finds it at month end.</p>
+  </div>
+
+  <h4>2. <code>/qa:design</code></h4>
+  <div class="prose">
+    <p>Thirteen conditions, risk scored, each assigned to a layer. Eight are unit tests, three are e2e, one waits on an open question, one is deliberately not automated. Plus a table of what is not being covered and why, and two charters for the parts a script cannot judge.</p>
+    <p>The design picks its test cart on purpose: $29.99 plus $9.99 gives a raw tax of $3.1984. Truncating gives $3.19, rounding gives $3.20. A cart where both agree would have passed either way and told you nothing.</p>
+  </div>
+
+  <h4>3. <code>/qa:generate</code></h4>
+  <div class="prose">
+    <p>Three e2e tests written, run, then broken on purpose to confirm they fail for the right reason. The eight unit rows were left unwritten, because this project has no unit layer and promoting them to e2e would make them slow and make them fail without saying which of forty things broke.</p>
+    <p>It also found that half of one acceptance criterion is untestable: the requirement says the confirmation repeats the total, and the confirmation page shows no amount at all. That gap is written in a comment above the test rather than papered over.</p>
+  </div>
+
+  <h4>4. <code>/qa:explore</code></h4>
+  <div class="prose">
+    <p>A 55 minute session against the charter the design produced. Seven findings, three of them real defects on the live site:</p>
+    <ul>
+      <li>The browser back button after confirming an order returns to a live Finish button, and pressing it confirms again with nothing to say it was a repeat.</li>
+      <li>Emptying the cart in a second tab does not stop the first tab confirming.</li>
+      <li>Navigating straight to the overview URL with an empty cart shows <code>Item total: $0</code> next to <code>Tax: $0.00</code> and lets a $0.00 order through.</li>
+    </ul>
+    <p>All three look like one cause: the cart is trusted from the rendered page instead of re-read at confirm. Saying that in the report turns three fixes into one.</p>
+  </div>
+
+  <h4>5. <code>/qa:audit</code></h4>
+  <div class="prose">
+    <p>The suite scores 5 on speed, isolation, waiting and assertions, and 2 on layers and coverage. Both twos are the same cause: the highest risk item in the requirement is a unit row, and there is no unit layer, so nothing in the repo would catch a rounding error.</p>
+    <p>Which is the point. Every one of those gaps was a recorded decision, and the audit's job is noticing that the decisions have not been acted on since.</p>
+  </div>
+
+  <div class="note">
+    All of it is in <a href="https://github.com/eduramos21/qa-automation-framework/tree/main/examples/artifacts">examples/artifacts</a>, including the generated tests next to the design rows that produced them.
+  </div>
+</section>
+
+<section class="section" id="phases">
+  <h2>Built in phases</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Phase</th><th>What</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>Skeleton, config contract, profile template, validator</td><td>done</td></tr>
+      <tr><td>1</td><td>TypeScript and Python web profiles, runnable demos</td><td>done</td></tr>
+      <tr><td>2</td><td>Requirement refinement and test design</td><td>done</td></tr>
+      <tr><td>3</td><td>Automated test generation</td><td>done</td></tr>
+      <tr><td>4</td><td>Assisted exploratory and manual testing</td><td>done</td></tr>
+      <tr><td>5</td><td>Test maintenance and suite auditing</td><td>done</td></tr>
+      <tr><td>6</td><td>Mobile profile and Appium demo</td><td>done</td></tr>
+      <tr><td>7</td><td>This site</td><td>done</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="prose">
+    <p>Java plus Selenium plus JUnit 5 is deliberately not shipped. It is the obvious next profile, and writing it from <code>profiles/_template</code> is the fastest way to find out whether this design holds up.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Plain HTML and CSS, no build step, no analytics. <a href="https://github.com/eduramos21/qa-automation-framework">Source</a>, MIT.</p>
+  <p>By <a href="https://eduramos21.github.io/">Eduardo Ramos</a>.</p>
+</footer>
+
+</body>
+</html>
