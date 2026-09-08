@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Print the resolved QA context: the project config plus the active profile.
+
+Every agent in this plugin runs this first. It answers, in one call, the four
+things an agent has to know before it touches anything:
+
+  where is qa.config.yml, which profile is active, how do I run tests here,
+  and what does good code look like in this stack.
+
+Usage:
+    qa-context                 every stack in the config
+    qa-context web             just the web stack
+    qa-context --paths         only the resolved paths, no file contents
+
+Profiles are looked up project first, then in the plugin. So a project can drop
+a profiles/ folder of its own next to qa.config.yml and override or add stacks
+without forking anything.
+
+Stdlib only, on purpose. This runs in whatever environment the project already
+has, and adding a pip install to the critical path of every agent would be a
+bad trade for one field of YAML.
+"""
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+CONFIG_NAME = "qa.config.yml"
+
+
+def find_config(start):
+    """Walk up from start looking for qa.config.yml."""
+    for directory in [start, *start.parents]:
+        candidate = directory / CONFIG_NAME
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def stacks_in(config_text):
+    """Map stack name to profile name, straight out of the stacks block.
+
+    A regex rather than a YAML parse so this has no dependencies. It reads the
+    stacks: block, takes each two space indented key as a stack, and the
+    profile: under it. Commented lines are skipped, which is what lets the
+    example config carry a commented out mobile block.
+    """
+    lines = config_text.splitlines()
+    try:
+        start = next(i for i, line in enumerate(lines) if re.match(r"^stacks:\s*$", line))
+    except StopIteration:
+        return {}
+
+    found = {}
+    stack = None
+    for line in lines[start + 1:]:
+        if line.strip().startswith("#") or not line.strip():
+            continue
+        if re.match(r"^\S", line):          # dedented back to a top level key
+            break
+        name = re.match(r"^  (\w[\w.-]*):\s*$", line)
+        if name:
+            stack = name.group(1)
+            continue
+        profile = re.match(r"^    profile:\s*(\S+)", line)
+        if profile and stack:
+            found[stack] = profile.group(1).strip("\"'")
+    return found
+
+
+def find_profile(name, config_dir):
+    """Project profiles win over the ones shipped with the plugin."""
+    for root in (config_dir / "profiles", PLUGIN_ROOT / "profiles"):
+        candidate = root / name
+        if (candidate / "profile.yaml").is_file():
+            return candidate
+    return None
+
+
+def show(path):
+    print("\n===== {} =====".format(path))
+    print(path.read_text().rstrip())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("stack", nargs="?", help="limit to one stack, e.g. web")
+    parser.add_argument("--paths", action="store_true", help="paths only")
+    parser.add_argument("--from", dest="start", default=".", help="where to start looking")
+    args = parser.parse_args()
+
+    start = Path(args.start).resolve()
+    config = find_config(start)
+    if config is None:
+        print(
+            "No {} found in {} or any parent.\n\n"
+            "Run /qa:init to create one, or copy qa.config.example.yml from the\n"
+            "plugin at {} and edit it.".format(CONFIG_NAME, start, PLUGIN_ROOT),
+            file=sys.stderr,
+        )
+        return 2
+
+    config_dir = config.parent
+    config_text = config.read_text()
+    stacks = stacks_in(config_text)
+
+    if args.stack:
+        if args.stack not in stacks:
+            print(
+                "No stack '{}' in {}. Stacks in this config: {}".format(
+                    args.stack, config, ", ".join(sorted(stacks)) or "none"),
+                file=sys.stderr,
+            )
+            return 2
+        stacks = {args.stack: stacks[args.stack]}
+
+    if not stacks:
+        print("{} declares no stacks, so no profile can be resolved.".format(config),
+              file=sys.stderr)
+        return 2
+
+    print("config:       {}".format(config))
+    print("project root: {}".format(config_dir))
+
+    missing = []
+    resolved = {}
+    for stack, profile_name in sorted(stacks.items()):
+        directory = find_profile(profile_name, config_dir)
+        if directory is None:
+            missing.append((stack, profile_name))
+            print("{:<12} profile '{}' NOT FOUND".format(stack + ":", profile_name))
+            continue
+        resolved[stack] = directory
+        print("{:<12} {} -> {}".format(stack + ":", profile_name, directory))
+
+    if missing:
+        print(
+            "\nLooked in {}/profiles and {}/profiles. Add the profile there, or "
+            "fix the name in {}.".format(config_dir, PLUGIN_ROOT, config),
+            file=sys.stderr,
+        )
+
+    if not args.paths:
+        show(config)
+        for stack, directory in sorted(resolved.items()):
+            show(directory / "profile.yaml")
+            conventions = directory / "CONVENTIONS.md"
+            if conventions.is_file():
+                print("\nconventions for {}: {}".format(stack, conventions))
+                print("Read that file before writing or changing any test in this stack.")
+
+    return 1 if missing else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -17,6 +17,7 @@ jobs:
           python-version: "3.12"
       - run: pip install pyyaml
       - run: python3 scripts/validate_profiles.py
+      - run: python3 scripts/test_qa_context.py
 
   manifests:
     name: json manifests
