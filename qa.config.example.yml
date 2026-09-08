@@ -1,0 +1,103 @@
+# qa.config.yml
+#
+# The one file that tells the QA agents what this project is made of.
+# Copy it to your project root as qa.config.yml and edit. Run /qa:init if you
+# would rather have the agent fill it in by looking at your repo.
+#
+# Every agent reads this before it does anything. If a value is wrong here, the
+# agents will be confidently wrong, so keep it honest.
+
+project:
+  # Used in report headers and generated file names.
+  name: acme-shop
+
+  # Optional. A markdown file of domain terms. The requirement and test design
+  # agents use it so generated tests speak the same language as the business.
+  # Leave it out if you do not have one.
+  glossary: docs/glossary.md
+
+# One entry per platform you test. Keys are free form but "web", "mobile" and
+# "api" are the ones the agents recognise without being told. Each entry points
+# at a profile under profiles/, which is what makes this framework open on
+# language, runner and CI.
+stacks:
+  web:
+    # Folder name under profiles/. See profiles/README.md to add your own.
+    profile: ts-playwright
+
+    # Where the test code for this stack lives, relative to the project root.
+    root: e2e/
+
+    # Name of the env var holding the base URL. The agents never hardcode URLs.
+    base_url_env: BASE_URL
+
+  mobile:
+    profile: mobile-appium-wdio
+    root: mobile-e2e/
+    platforms: [android, ios]
+
+    # App under test. Path or a build artifact URL, per platform.
+    app:
+      android: builds/app-debug.apk
+      ios: builds/App.app
+
+ci:
+  # github-actions | gitlab-ci | jenkins | circleci | none
+  # Decides which CI template /qa:init copies out of the profile's ci/ folder.
+  provider: github-actions
+
+  # Optional. Where the pipeline definition lives, if it is not the default
+  # location for the provider.
+  path: .github/workflows/e2e.yml
+
+tracker:
+  # jira | github-issues | linear | none
+  # Where requirements come from and where bugs go.
+  provider: jira
+  project_key: SHOP
+
+  # Optional. Which MCP server to use to reach it. Omit for github-issues,
+  # which uses the gh CLI.
+  mcp: atlassian
+
+requirements:
+  # confluence | markdown | github-issues | jira
+  source: markdown
+
+  # Used when source is markdown. Folder of requirement documents.
+  path: docs/requirements/
+
+reporting:
+  # Where the runner drops artifacts. The maintainer and auditor agents read
+  # these to work out why something failed.
+  artifacts: test-results/
+
+  # Optional. Set if you publish an Allure report.
+  allure: true
+
+# House rules. The auditor scores against these and the author agent obeys them
+# when it writes new tests. Add your own, they are free form strings, but the
+# ones below are understood out of the box.
+policies:
+  # Attribute the author agent prefers when it needs a stable hook.
+  test_id_attribute: data-testid
+
+  # A single test that runs longer than this gets flagged in an audit.
+  max_test_runtime_s: 60
+
+  # Patterns that fail an audit.
+  #   hard_sleeps             sleep or waitForTimeout with a fixed number
+  #   absolute_xpath          //div[3]/span style locators
+  #   conditional_assertions  assertions inside an if, so the test can pass by
+  #                           skipping the check
+  #   shared_mutable_state    tests that depend on order or on each other
+  #   no_assertion            a test that drives the app but never asserts
+  forbid:
+    - hard_sleeps
+    - absolute_xpath
+    - conditional_assertions
+    - shared_mutable_state
+    - no_assertion
+
+  # Optional. Tests are expected to clean up after themselves.
+  require_test_data_cleanup: true

@@ -1,0 +1,53 @@
+# Copy this folder, rename it, and fill it in. That is all it takes to teach the
+# agents a new stack. See profiles/README.md for the walkthrough.
+#
+# Keys marked required are checked by scripts/validate_profiles.py.
+
+name: my-stack              # required. Must match the folder name.
+language: TODO              # required. typescript | python | java | csharp | ruby | kotlin ...
+runner: TODO                # required. playwright | selenium | cypress | pytest | junit5 | appium ...
+platform: TODO              # required. web | mobile | api | desktop
+
+# How to drive this stack from a terminal. The agents substitute the
+# placeholders. Anything the agent needs to run, it reads from here, so it never
+# has to guess at your build tool.
+#   {file}   path to a test file
+#   {title}  the test name
+#   {tag}    a tag or marker expression
+commands:
+  install: TODO             # required
+  test: TODO                # required
+  test_one: TODO            # required. Run a single test, used when fixing one failure.
+  test_tagged: TODO         # optional
+  lint: TODO                # optional. Runs on one {file}. Used by the edit hook.
+  report: TODO              # optional. Opens the last report.
+
+# Where things live inside the stack root from qa.config.yml.
+layout:
+  tests: tests/             # required
+  test_glob: "**/*.TODO"    # required. How to recognise a test file.
+  pages: pages/             # optional. Page objects or screen objects.
+  fixtures: fixtures/       # optional
+  data: data/               # optional. Test data files.
+
+# Files the author agent copies and fills in. Paths are relative to this folder.
+# The "test" template is required, the rest are yours to add.
+templates:
+  test: templates/test.tmpl
+  page_object: templates/page-object.tmpl
+
+# Ordered list, best first. The author agent walks this list and uses the first
+# strategy that can identify the element. Keeps generated locators consistent.
+selector_priority:
+  - TODO
+
+# CI files this profile ships. /qa:init copies the one matching ci.provider in
+# qa.config.yml. Keys must match the provider names used there.
+ci:
+  github-actions: ci/github-actions.yml
+  jenkins: ci/Jenkinsfile
+
+# Free text. Anything an agent should know about this stack that does not fit
+# above. Gotchas, auth setup, parallelism limits, that sort of thing.
+notes: |
+  TODO

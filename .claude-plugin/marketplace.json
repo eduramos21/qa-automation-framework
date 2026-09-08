@@ -1,0 +1,14 @@
+{
+  "name": "eduramos21-qa",
+  "owner": {
+    "name": "Eduardo Ramos",
+    "url": "https://github.com/eduramos21"
+  },
+  "plugins": [
+    {
+      "name": "qa",
+      "source": "./",
+      "description": "AI agents and skills for QA work, stack agnostic, driven by qa.config.yml and per-stack profiles."
+    }
+  ]
+}

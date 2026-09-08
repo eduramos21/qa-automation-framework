@@ -1,0 +1,13 @@
+{
+  "name": "qa",
+  "description": "AI agents and skills for QA work: requirement refinement, test design, exploratory testing, test generation, maintenance and suite auditing. Stack agnostic, driven by a qa.config.yml and per-stack profiles.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Eduardo Ramos",
+    "url": "https://github.com/eduramos21"
+  },
+  "homepage": "https://eduramos21.github.io/qa-automation-framework/",
+  "repository": "https://github.com/eduramos21/qa-automation-framework",
+  "license": "MIT",
+  "keywords": ["qa", "testing", "test-automation", "playwright", "appium", "pytest", "exploratory-testing"]
+}

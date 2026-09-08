@@ -1,0 +1,31 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  profiles:
+    name: profile wiring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - run: python3 scripts/validate_profiles.py
+
+  manifests:
+    name: json manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: parse every json manifest
+        run: |
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json .claude/settings.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+            echo "ok $f"
+          done

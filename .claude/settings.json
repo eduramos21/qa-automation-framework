@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "eduramos21-qa": {
+      "source": {
+        "source": "github",
+        "repo": "eduramos21/qa-automation-framework"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "qa@eduramos21-qa": true
+  }
+}
