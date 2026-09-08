@@ -25,10 +25,16 @@ worse than no config, because every agent afterwards trusts it.
 | how existing tests pick elements | `policies.test_id_attribute` |
 
 **2. Match a profile.** List what is in `profiles/` in the plugin, plus any
-`profiles/` next to the project. If one matches the language and runner, use it.
-If none does, say so and offer to build one from `profiles/_template`. Do not
-force a near match, a Selenium project pointed at the Playwright profile will
-generate code that does not compile.
+`profiles/` next to the project. Three outcomes:
+
+- **Nothing matches the language and runner.** Say so and run `/qa:profile`,
+  which reads their suite and drafts one. Do not force a near match, a Selenium
+  project pointed at the Playwright profile generates code that does not compile.
+- **One matches and the repo has no tests yet.** Use it as is.
+- **One matches and the repo already has a suite.** Use it, and say that the
+  shipped `CONVENTIONS.md` describes a house style that is probably not theirs.
+  Offer `/qa:profile` to rewrite it from their code. They can skip it and come
+  back when the first generated test looks wrong, which is the usual moment.
 
 **3. Ask about the rest.** Only what the repo cannot tell you. Usually the
 tracker and project key, where requirements live, and the base URL env var name.
@@ -48,8 +54,10 @@ the diff you would make and let the user decide.
 **6. Check it.** Run `qa-context`. It should resolve every stack. Then run the
 profile's `commands.test` to confirm the suite actually runs from a clean state.
 
-**7. Say what is next.** Point at `/qa:refine` for a first requirement, or
-`/qa:audit` if there is already a suite worth looking at.
+**7. Say what is next.** On a repo that already has a suite, `/qa:audit` first:
+it needs nothing but this config, reads code they already have, and hands back
+something useful in one go. On a new project, `/qa:refine` with the first
+requirement.
 
 ## Rules
 
@@ -58,8 +66,12 @@ does. If the existing tests use `data-qa`, write `data-qa`, do not write
 `data-testid` because the example does. You can point out a policy worth
 tightening, separately, after the config is true.
 
-**Do not invent a profile match.** No profile is a normal outcome and building
-one from the template is half an hour. Guessing wrong costs more.
+**Do not invent a profile match.** No profile is a normal outcome, and
+`/qa:profile` builds one by reading the suite. Guessing wrong costs more than
+either.
+
+**A matching profile is not a matching style.** The runner being right does not
+mean the conventions are. On a repo that already has tests, say so.
 
 **Do not overwrite.** An existing `qa.config.yml` or pipeline gets a proposed
 diff, not a replacement.

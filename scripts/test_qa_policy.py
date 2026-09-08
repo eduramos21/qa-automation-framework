@@ -102,6 +102,79 @@ print("  ok   inline list")
 assert qa_policy.forbidden_in("policies:\n  test_id_attribute: data-test\n") == []
 print("  ok   no forbid block")
 
+print("changed_lines, the brownfield guard:")
+
+
+def brownfield_check():
+    """A repo that already has violations must not block unrelated edits.
+
+    This is the whole reason the hook is changed-only. Without it, dropping the
+    plugin into a suite with 200 existing sleeps fails every edit to every file
+    that has one, and the hook gets deleted on day two.
+    """
+    import subprocess
+    import tempfile
+
+    legacy = (
+        "test('one', async ({ page }) => {\n"
+        "  await page.goto('/');\n"
+        "  await page.waitForTimeout(2000);\n"
+        "  await expect(page).toHaveTitle('Home');\n"
+        "});\n"
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        spec = root / "legacy.spec.ts"
+        spec.write_text(legacy)
+
+        def run(*args):
+            subprocess.run(["git"] + list(args), cwd=str(root),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           check=True)
+
+        try:
+            run("init", "-q")
+            run("config", "user.email", "t@t.t")
+            run("config", "user.name", "t")
+            run("add", "-A")
+            run("commit", "-qm", "existing suite")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("  skip git not usable here")
+            return
+
+        forbid = ["hard_sleeps"]
+
+        # The pre-existing sleep is real, and a full scan still reports it.
+        assert len(qa_policy.check([spec], forbid)) == 1, "full scan lost the legacy sleep"
+        print("  ok   a full scan still reports the pre-existing sleep")
+
+        # An unrelated edit must not be blamed for it.
+        spec.write_text(legacy.replace("'Home'", "'Homepage'"))
+        touched = qa_policy.changed_lines(spec)
+        kept = [v for v in qa_policy.check([spec], forbid) if v[1] in touched]
+        assert kept == [], "an unrelated edit was blamed for a legacy sleep"
+        print("  ok   an unrelated edit reports nothing")
+
+        # A newly added sleep must be caught, and only that one.
+        spec.write_text(legacy.replace(
+            "  await page.goto('/');",
+            "  await page.goto('/');\n  await page.waitForTimeout(9999);"))
+        touched = qa_policy.changed_lines(spec)
+        kept = [v for v in qa_policy.check([spec], forbid) if v[1] in touched]
+        assert len(kept) == 1, "expected exactly the new sleep, got {}".format(kept)
+        assert "9999" in kept[0][4], "caught the wrong line: {}".format(kept[0][4])
+        print("  ok   a newly added sleep is caught, and only that one")
+
+        # A file git has never seen is entirely new, so all of it counts.
+        fresh = root / "fresh.spec.ts"
+        fresh.write_text(legacy)
+        assert qa_policy.changed_lines(fresh) is None, "untracked file should read as all new"
+        print("  ok   an untracked file is treated as all new")
+
+
+brownfield_check()
+
 print("\nthe shipped suites stay clean:")
 for config in sorted(ROOT.glob("examples/*/qa.config.yml")):
     forbid = qa_policy.forbidden_in(config.read_text())

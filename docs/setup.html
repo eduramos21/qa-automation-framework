@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup | qa-automation-framework</title>
+<meta name="description" content="What you need, how to install it, how to connect Jira and a browser, and what it looks like on a repo that already has tests.">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <nav class="nav" aria-label="Main">
+    <a class="nav__brand" href="./">qa-automation-framework</a>
+    <ul class="nav__menu">
+      <li><a href="./">Overview</a></li>
+      <li><a href="#needs">What you need</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#connect">Connect</a></li>
+      <li><a href="#existing">Existing repo</a></li>
+      <li><a href="reference.html">Reference</a></li>
+      <li><a href="https://github.com/eduramos21/qa-automation-framework">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+<div class="hero">
+  <h1>Setup</h1>
+  <p>Two paths. A project with no tests yet, and a project that already has a suite and a house style. The second one is the common case and it is the one most of this page is about.</p>
+</div>
+
+<section class="section" id="needs">
+  <h2>What you need</h2>
+
+  <h3>Always</h3>
+  <div class="prose">
+    <ul>
+      <li>Claude Code</li>
+      <li><code>python3</code>, any 3.8 or later, for <code>qa-context</code> and <code>qa-policy</code>. Both are stdlib only, nothing to install</li>
+      <li><code>git</code></li>
+    </ul>
+  </div>
+
+  <h3>Only for the stack you actually use</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Profile</th><th>Needs</th></tr></thead>
+    <tbody>
+      <tr><td><code>ts-playwright</code></td><td>Node 18+</td></tr>
+      <tr><td><code>py-pytest-playwright</code></td><td>Python 3.9+, a virtualenv</td></tr>
+      <tr><td><code>mobile-appium-wdio</code></td><td>Node 18+, Java, Android SDK with an emulator or a connected device</td></tr>
+      <tr><td>your own</td><td>whatever your runner already needs</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Only if you want the thing it enables</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>For</th><th>You need</th></tr></thead>
+    <tbody>
+      <tr><td><code>/qa:explore</code> in a real browser</td><td>Node, for the Playwright MCP. It ships enabled and installs itself on first use</td></tr>
+      <tr><td>Jira or Confluence as the source of requirements and the home for bugs</td><td>The Atlassian MCP, connected once per machine</td></tr>
+      <tr><td>GitHub Issues instead</td><td>The <code>gh</code> CLI, authenticated. No MCP</td></tr>
+      <tr><td><code>/qa:explore</code> on a device</td><td>An Appium or WebdriverIO MCP, plus a running Appium server</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    No server, no database, no API key for the framework itself. It is a plugin, two Python scripts and a folder of markdown.
+  </div>
+</section>
+
+<section class="section" id="install">
+  <h2>Install</h2>
+
+  <pre><code>/plugin marketplace add eduramos21/qa-automation-framework
+/plugin install qa@eduramos21-qa</code></pre>
+
+  <div class="prose">
+    <p>If the install summary says <code>Run /reload-plugins to activate</code>, do that.</p>
+    <p>To try it without installing, clone and point Claude Code at the clone:</p>
+  </div>
+
+  <pre><code>git clone https://github.com/eduramos21/qa-automation-framework
+cd qa-automation-framework
+claude --plugin-dir .</code></pre>
+
+  <div class="prose">
+    <p>Check it loaded. <code>/help</code> should list <code>/qa:audit</code>, <code>/qa:refine</code> and the rest, and <code>qa-context</code> should be on the path:</p>
+  </div>
+
+  <pre><code>$ qa-context
+No qa.config.yml found in /your/repo or any parent.</code></pre>
+
+  <div class="prose">
+    <p>That error is the correct output before setup. It means the tooling is there and the project is not configured yet.</p>
+  </div>
+</section>
+
+<section class="section" id="connect">
+  <h2>Connecting Jira</h2>
+  <p class="lede">Two steps. The first is once per machine, the second is once per project.</p>
+
+  <h3>1. Connect the MCP</h3>
+  <pre><code>claude mcp add --transport http atlassian https://mcp.atlassian.com/v1/mcp</code></pre>
+
+  <div class="prose">
+    <p>Then <code>/mcp</code> inside Claude Code to run the OAuth flow. Check it took:</p>
+  </div>
+
+  <pre><code>$ claude mcp list
+atlassian: https://mcp.atlassian.com/v1/mcp - ✔ Connected</code></pre>
+
+  <div class="prose">
+    <p>If you already reach Jira through a claude.ai connector, it is connected and there is nothing to do here.</p>
+  </div>
+
+  <h3>2. Point the project at it</h3>
+  <pre><code># qa.config.yml
+tracker:
+  provider: jira
+  project_key: SHOP
+  mcp: atlassian
+
+requirements:
+  source: jira          # or confluence, if the specs live there</code></pre>
+
+  <h3>What that turns on</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Command</th><th>With a tracker configured</th></tr></thead>
+    <tbody>
+      <tr><td><code>/qa:refine SHOP-142</code></td><td>Fetches the issue, its linked issues and its comments. The comments matter: half the decisions on any ticket live there and never make it into the description</td></tr>
+      <tr><td><code>/qa:explore</code></td><td>Files what it finds into <code>SHOP</code>, using the bug report shape, with the trace or screenshot attached</td></tr>
+      <tr><td><code>/qa:audit</code></td><td>Checks coverage against the real requirements rather than guessing what the suite was supposed to cover</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>GitHub Issues instead</h3>
+  <pre><code>tracker:
+  provider: github-issues
+
+requirements:
+  source: github-issues</code></pre>
+  <div class="prose">
+    <p>No MCP. It shells out to <code>gh issue view --comments</code> and <code>gh issue create</code>, so you need <code>gh auth login</code> done and nothing else.</p>
+  </div>
+
+  <h3>Neither</h3>
+  <pre><code>tracker:
+  provider: none
+
+requirements:
+  source: markdown
+  path: docs/requirements/</code></pre>
+  <div class="prose">
+    <p>Requirements are read from files and bug reports are written to files. Everything still works, it just does not file anything for you. This is what both demo projects in the repo use.</p>
+  </div>
+</section>
+
+<section class="section" id="new">
+  <h2>Path A, a project with no tests yet</h2>
+
+  <pre><code>cd your-repo
+claude
+/qa:init</code></pre>
+
+  <div class="prose">
+    <p><code>init</code> reads the repo, works out the language, runner and CI, asks about what it cannot see, writes <code>qa.config.yml</code> and drops in a pipeline file. Then:</p>
+  </div>
+
+  <pre><code>/qa:refine SHOP-142        # or a path to a markdown requirement
+/qa:design qa/requirements/SHOP-142.md
+/qa:generate qa/design/SHOP-142.md</code></pre>
+
+  <div class="prose">
+    <p>That is the whole loop. The <a href="./#walkthrough">worked example</a> on the overview page follows exactly this, start to finish, with real output.</p>
+  </div>
+</section>
+
+<section class="section" id="existing">
+  <h2>Path B, a repo that already has tests</h2>
+  <p class="lede">The common case, and the one with real friction. Being upfront about it is more useful than pretending there is none.</p>
+
+  <h3>Start with the audit, not the config</h3>
+  <pre><code>cd your-repo
+claude
+/qa:init          # five minutes, mostly confirming what it already worked out
+/qa:audit</code></pre>
+
+  <div class="prose">
+    <p><code>/qa:audit</code> is the thing to run first on an existing suite. It needs nothing but the config, it reads code you already have, it writes nothing, and it hands back nine scores with evidence and a ranked list of findings. If the tool is going to be useful to you, you will know from that one report.</p>
+  </div>
+
+  <h3>Then fix the profile, because the shipped one is not your house style</h3>
+  <div class="prose">
+    <p>If <code>init</code> matched your runner, the profile knows how to <em>run</em> your tests. It does not know how you <em>write</em> them. The shipped <code>CONVENTIONS.md</code> holds one particular set of opinions, and if your repo does something else, generated code will fight your reviewers.</p>
+    <p>So before generating anything:</p>
+  </div>
+
+  <pre><code>/qa:profile</code></pre>
+
+  <div class="prose">
+    <p>That reads your suite, weighted towards the most recently touched files because recent code is the current style, and drafts a <code>profile.yaml</code> and a <code>CONVENTIONS.md</code> that describe <em>what your repo actually does</em>. Every example in it is lifted from your code, with the path it came from.</p>
+    <p>It writes into <code>&lt;your-repo&gt;/profiles/</code>, which wins over the plugin's copy. Nothing is forked, nothing is patched, and updating the plugin later does not overwrite your description.</p>
+    <p>Where your suite contradicts itself, and any suite over a year old does, it asks which pattern new tests should follow rather than picking silently. That question takes ten seconds to answer and is the highest value part of the process.</p>
+  </div>
+
+  <div class="note">
+    It describes, it does not correct. If your page objects contain assertions, the conventions will say your page objects contain assertions. Things worth changing go in a separate report, never into the conventions file. Mixing "what we do" with "what we should do" produces code your reviewers reject, and then the tool gets uninstalled.
+  </div>
+
+  <h3>No profile matches your runner at all</h3>
+  <div class="prose">
+    <p>Java plus Selenium, Cypress, Robot Framework, C# plus NUnit. Same command, <code>/qa:profile</code>, starting from the blank template instead of a near match. Meanwhile <code>/qa:refine</code>, <code>/qa:design</code> and <code>/qa:explore</code> already work, because none of them writes code.</p>
+  </div>
+
+  <h3>The policy hook will not fight your legacy code</h3>
+  <div class="prose">
+    <p>Worth knowing, because the obvious implementation of this would be unusable. <code>policies.forbid</code> lists patterns like fixed sleeps. A suite that has been around a while has plenty.</p>
+    <p>The edit hook only reports violations on <strong>lines an edit actually touched</strong>. Editing a legacy file that already contains three sleeps, for an unrelated reason, reports nothing. Adding a new sleep reports that one. A brand new file is checked in full.</p>
+    <p>Pre-existing violations are still real and still show up in an audit, which is where a decision about them can be made, rather than being forced on you one file at a time.</p>
+  </div>
+
+  <pre><code># the full picture, any time you want it
+qa-policy --stack web
+
+# only what this edit introduced, which is what the hook uses
+qa-policy --changed-only path/to/spec.ts</code></pre>
+
+  <h3>A monorepo with several suites</h3>
+  <pre><code>stacks:
+  web:    { profile: acme-web,    root: apps/web/e2e/ }
+  api:    { profile: acme-api,    root: services/api/tests/ }
+  mobile: { profile: acme-mobile, root: apps/mobile/e2e/ }</code></pre>
+  <div class="prose">
+    <p>Every command takes the stack name. <code>qa-context api</code>, <code>/qa:audit api</code>, <code>qa-policy --stack api</code>.</p>
+  </div>
+
+  <h3>Roughly what it costs</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Step</th><th>Time</th><th>Worth it when</th></tr></thead>
+    <tbody>
+      <tr><td><code>/qa:init</code></td><td>5 minutes</td><td>always, everything else needs it</td></tr>
+      <tr><td><code>/qa:audit</code></td><td>one run</td><td>always, and it is the thing that tells you whether to continue</td></tr>
+      <tr><td><code>/qa:profile</code></td><td>20 to 40 minutes, mostly you answering questions</td><td>before generating or fixing any code</td></tr>
+      <tr><td>Writing a profile from the blank template by hand</td><td>half a day</td><td>only if you would rather not have it read your suite</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="section" id="trouble">
+  <h2>When something is wrong</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Output</th><th>Means</th><th>Do</th></tr></thead>
+    <tbody>
+      <tr><td><code>No qa.config.yml found</code></td><td>Not set up, or you are in the wrong directory</td><td><code>/qa:init</code>, or <code>qa-context --from &lt;path&gt;</code></td></tr>
+      <tr><td><code>profile 'x' NOT FOUND</code></td><td>The config names a profile that does not exist</td><td>Check the spelling, or <code>/qa:profile</code></td></tr>
+      <tr><td><code>declares no stacks</code></td><td>The config is a stub</td><td>Fill in the <code>stacks</code> block</td></tr>
+      <tr><td><code>qa-context: command not found</code></td><td>The plugin is not loaded</td><td><code>/reload-plugins</code>, or run <code>bin/qa-context</code> from a clone</td></tr>
+      <tr><td>Generated tests do not look like your repo</td><td>The profile's conventions are not yours</td><td><code>/qa:profile</code></td></tr>
+      <tr><td>The hook complains about code you did not write</td><td>Should not happen, the hook is changed-only</td><td>Check the file is committed. Git cannot tell what changed in a file it has never seen, so an untracked file is checked in full</td></tr>
+      <tr><td><code>getByTestId</code> finds nothing</td><td><code>policies.test_id_attribute</code> and the runner config disagree</td><td>Make them match. This one is silent and wastes an afternoon</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Plain HTML and CSS, no build step, no analytics. <a href="https://github.com/eduramos21/qa-automation-framework">Source</a>, MIT.</p>
+  <p>By <a href="https://eduramos21.github.io/">Eduardo Ramos</a>.</p>
+</footer>
+
+</body>
+</html>

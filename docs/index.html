@@ -19,6 +19,7 @@
       <li><a href="#install">Install</a></li>
       <li><a href="#workflows">Workflows</a></li>
       <li><a href="#walkthrough">Walkthrough</a></li>
+      <li><a href="setup.html">Setup</a></li>
       <li><a href="reference.html">Reference</a></li>
       <li><a href="https://github.com/eduramos21/qa-automation-framework">GitHub</a></li>
     </ul>
@@ -59,6 +60,10 @@
     <div class="card">
       <h3>Says what it did not do</h3>
       <p>Every workflow reports what it skipped and why. A design that covers everything and an audit that finds nothing are both wrong.</p>
+    </div>
+    <div class="card">
+      <h3>Fits a repo that already has tests</h3>
+      <p><code>/qa:profile</code> reads your suite and writes down the house style it already has. The policy hook only flags lines an edit touched, so it never fights code you inherited. <a href="setup.html#existing">How that goes</a>.</p>
     </div>
   </div>
 </section>
@@ -141,7 +146,10 @@ conventions for web: /plugin/profiles/ts-playwright/CONVENTIONS.md</code></pre>
 cd qa-automation-framework
 claude --plugin-dir .</code></pre>
 
-  <div class="prose"><p>Or run the demo suites, which need no setup and no credentials:</p></div>
+  <div class="prose">
+    <p>Prerequisites, connecting Jira, and what this looks like on a repo that already has tests are all on the <a href="setup.html">setup page</a>.</p>
+    <p>Or run the demo suites, which need no setup and no credentials:</p>
+  </div>
   <pre><code>cd examples/web-ts
 npm ci &amp;&amp; npx playwright install chromium &amp;&amp; npx playwright test
 # 9 passed (2.6s)</code></pre>
@@ -179,6 +187,11 @@ npm ci &amp;&amp; npx playwright install chromium &amp;&amp; npx playwright test
         <td><code>/qa:fix</code></td>
         <td>Triages a red test through five causes before changing anything, then fixes the cause once</td>
         <td>edits, plus what it found and did not fix</td>
+      </tr>
+      <tr>
+        <td><code>/qa:profile</code></td>
+        <td>Reads a suite that already exists and writes down its house style, so generated code matches the repo rather than a generic example</td>
+        <td><code>&lt;project&gt;/profiles/&lt;name&gt;/</code></td>
       </tr>
       <tr>
         <td><code>/qa:audit</code></td>
@@ -261,6 +274,7 @@ npm ci &amp;&amp; npx playwright install chromium &amp;&amp; npx playwright test
       <tr><td>5</td><td>Test maintenance and suite auditing</td><td>done</td></tr>
       <tr><td>6</td><td>Mobile profile and Appium demo</td><td>done</td></tr>
       <tr><td>7</td><td>This site</td><td>done</td></tr>
+      <tr><td>8</td><td>Brownfield: changed-only policy hook, <code>/qa:profile</code>, setup docs</td><td>done</td></tr>
     </tbody>
   </table>
   </div>

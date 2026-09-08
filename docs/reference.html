@@ -15,6 +15,7 @@
     <a class="nav__brand" href="./">qa-automation-framework</a>
     <ul class="nav__menu">
       <li><a href="./">Overview</a></li>
+      <li><a href="setup.html">Setup</a></li>
       <li><a href="#config">Config</a></li>
       <li><a href="#profiles">Profiles</a></li>
       <li><a href="#agents">Agents</a></li>
@@ -177,6 +178,7 @@ python3 scripts/validate_profiles.py</code></pre>
     <thead><tr><th>Skill</th><th>Does</th><th>Hands off to</th></tr></thead>
     <tbody>
       <tr><td><code>/qa:init</code></td><td>Works out the stack from the repo, writes <code>qa.config.yml</code>, drops in CI</td><td>inline</td></tr>
+      <tr><td><code>/qa:profile</code></td><td>Reads an existing suite and drafts a profile describing what that repo actually does, into <code>&lt;project&gt;/profiles/</code></td><td>inline, it asks which pattern wins where the suite disagrees with itself</td></tr>
       <tr><td><code>/qa:refine</code></td><td>Ticket to acceptance criteria, ambiguities, risk. Asks the blocking questions</td><td>inline, it needs a conversation</td></tr>
       <tr><td><code>/qa:design</code></td><td>Risk scored coverage matrix, layer per row, plus what is not covered</td><td>inline</td></tr>
       <tr><td><code>/qa:explore</code></td><td>Session based exploratory testing through the browser or device MCP</td><td>inline, it needs a conversation</td></tr>
@@ -203,6 +205,10 @@ python3 scripts/validate_profiles.py</code></pre>
   </table>
   </div>
 
+  <div class="note" style="margin-bottom:1.5rem">
+    <code>/qa:profile</code> is the brownfield entry point. A shipped profile knows how to <em>run</em> your tests. It does not know how you <em>write</em> them, and generated code that fights your reviewers is worse than no generated code. See the <a href="setup.html#existing">setup page</a>.
+  </div>
+
   <div class="note">
     There is no <code>page-object-authoring</code> skill. That knowledge lives in each profile's <code>CONVENTIONS.md</code>, where it can be stack specific and correct, instead of in a skill where it would have to be generic and vague.
   </div>
@@ -216,11 +222,13 @@ python3 scripts/validate_profiles.py</code></pre>
     <p>Both stdlib only Python, because they run on the critical path of every task and adding a <code>pip install</code> there would be a bad trade for a few fields of YAML.</p>
   </div>
   <pre><code>qa-context [stack] [--paths]     resolve config + active profile + conventions
-qa-policy  &lt;file&gt;... | --stack   check against policies.forbid</code></pre>
+qa-policy  &lt;file&gt;... | --stack   check against policies.forbid
+qa-policy  --changed-only &lt;file&gt; only lines this working tree added or changed</code></pre>
 
   <h3>One hook</h3>
   <div class="prose">
     <p><code>PostToolUse</code> on <code>Write</code> and <code>Edit</code> runs <code>qa-policy --hook</code>. A test written with a forbidden pattern in it exits 2, which is the code that sends the message back to be fixed rather than only printing it. Outside a project with a config, it does nothing.</p>
+    <p><code>--hook</code> implies <code>--changed-only</code>, and that is what makes it usable on a repo that already has a suite. It reports violations on lines the edit touched, not on the whole file. Dropping this into a codebase with 200 existing sleeps and then failing every edit to every file containing one is not a guardrail, it is a wall, and it gets the hook deleted on day two. Pre-existing violations are still real and still surface in an audit, where a decision about them can actually be made. A file git has never seen is checked in full, since there is nothing to compare it against.</p>
   </div>
 
   <h3>MCP</h3>

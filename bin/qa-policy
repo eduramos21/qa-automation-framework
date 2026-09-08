@@ -11,6 +11,14 @@ Exit 0 clean, 1 violations found, 2 could not run. In --hook mode violations
 exit 2 instead, because that is the code that sends the message back to the
 model to fix rather than only printing it.
 
+--hook also implies --changed-only, which is what makes this usable on a repo
+that already has a suite. Dropping this plugin into a codebase with 200 existing
+sleeps in it and then failing every edit to any file that contains one is not a
+guardrail, it is a wall, and it gets the hook deleted on day two. So the hook
+only reports violations on lines the edit actually touched. Pre-existing ones
+are still real, and they show up in an audit, which is where a decision about
+them can be made rather than being forced one file at a time.
+
 The checks are textual on purpose. A real parser per language would be a lot of
 code for a check whose job is to catch the obvious thing quickly, in a hook,
 before it lands. Two of the checks are heuristics and say so in their output.
@@ -20,10 +28,12 @@ Stdlib only. Same reason as qa-context: this runs on the critical path.
 """
 
 import argparse
+import difflib
 import importlib.machinery
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -165,6 +175,45 @@ def forbidden_in(config_text):
     return []
 
 
+def git(args, cwd):
+    """Run git, or return None if it is not there or the command fails."""
+    try:
+        done = subprocess.run(
+            ["git"] + args, cwd=str(cwd),
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.decode("utf-8", "replace")
+
+
+def changed_lines(path):
+    """Line numbers in path that this working tree added or changed.
+
+    None means the question cannot be answered, and every caller treats that as
+    "all of them". That is the safe direction: a file outside git, or newly
+    added, or a git that will not run, gets fully checked rather than silently
+    skipped.
+    """
+    if not path.is_file():
+        return None
+
+    committed = git(["show", "HEAD:./{}".format(path.name)], path.parent)
+    if committed is None:
+        return None
+
+    now = path.read_text().splitlines()
+    before = committed.splitlines()
+
+    changed = set()
+    matcher = difflib.SequenceMatcher(a=before, b=now, autojunk=False)
+    for tag, _, _, start, end in matcher.get_opcodes():
+        if tag in ("replace", "insert"):
+            changed.update(range(start + 1, end + 1))
+    return changed
+
+
 def check(paths, forbid):
     violations = []
     for path in paths:
@@ -227,6 +276,9 @@ def main():
     parser.add_argument("--stack", help="check the whole suite for this stack")
     parser.add_argument("--hook", action="store_true",
                         help="read a PostToolUse hook payload from stdin")
+    parser.add_argument("--changed-only", action="store_true",
+                        help="only report violations on lines this working tree "
+                             "added or changed. Implied by --hook")
     args = parser.parse_args()
 
     paths = list(args.files)
@@ -261,7 +313,18 @@ def main():
     if not paths:
         return 0
 
-    found = report(check(paths, forbid))
+    violations = check(paths, forbid)
+
+    if args.changed_only or args.hook:
+        kept = []
+        for violation in violations:
+            path, number = violation[0], violation[1]
+            touched = changed_lines(path)
+            if touched is None or number in touched:
+                kept.append(violation)
+        violations = kept
+
+    found = report(violations)
 
     # In hook mode, exit 2 rather than 1. That is the code that feeds stderr
     # back to the model so it fixes the file, instead of only printing to the

@@ -14,6 +14,8 @@ Five QA workflows, working against one project:
 - Quality auditing of automation suites
 
 Full docs: **https://eduramos21.github.io/qa-automation-framework/**
+Setup, including Jira and what this looks like on a repo that already has tests:
+**https://eduramos21.github.io/qa-automation-framework/setup.html**
 
 ## The idea
 
@@ -97,6 +99,46 @@ To try it without installing, `claude --plugin-dir .` from a clone.
 | `/qa:generate` | Writes tests in the profile's style, runs them, then breaks them to prove they can fail | test files, plus what it did not write |
 | `/qa:fix` | Triages through five causes before changing anything, fixes the cause once | edits, plus what it found and did not fix |
 | `/qa:audit` | Nine area rubric with evidence, findings ranked by cost over effort | `qa/audit/<date>.md` |
+| `/qa:profile` | Reads a suite that already exists and writes down its house style | `<project>/profiles/<name>/` |
+
+## If your repo already has tests
+
+The common case, and the one worth being straight about.
+
+```bash
+cd your-repo
+claude
+/qa:init          # 5 minutes, mostly confirming what it worked out from the repo
+/qa:audit         # run this first, it reads code you already have and writes nothing
+```
+
+`/qa:audit` is what tells you whether any of this is useful to you. It needs
+only the config, touches nothing, and hands back nine scores with evidence plus
+a ranked list of findings.
+
+Before generating or fixing any code, fix the profile:
+
+```
+/qa:profile
+```
+
+A shipped profile knows how to *run* your tests. It does not know how you
+*write* them. `/qa:profile` reads your suite, weighted towards recently touched
+files because recent code is the current style, and drafts a `profile.yaml` and
+`CONVENTIONS.md` describing what your repo actually does, with every example
+lifted from your code. It writes into `<your-repo>/profiles/`, which wins over
+the plugin's copy, so updating the plugin never overwrites your description.
+
+It describes, it does not correct. If your page objects hold assertions, the
+conventions will say so. Things worth changing go in a separate report and never
+into the conventions file, because a conventions file that mixes "what we do"
+with "what we should do" produces code your reviewers reject.
+
+The policy hook will not fight your legacy code either. It reports violations
+only on lines an edit actually touched, so editing a file that already contains
+three sleeps, for an unrelated reason, reports nothing. Adding a new sleep
+reports that one. Pre-existing ones stay an audit finding, which is where a
+decision about them belongs.
 
 ## Try the demos
 
@@ -206,6 +248,7 @@ whether this design holds up.
 | 5 | Test maintenance and suite auditing | done |
 | 6 | Mobile profile and Appium demo | done |
 | 7 | Docs site | done |
+| 8 | Brownfield: changed-only policy hook, `/qa:profile`, setup docs | done |
 
 ## License
 

@@ -59,3 +59,7 @@ argument about the number instead of a fix.
 
 `/qa:fix` for the findings that are actual failures. For the structural ones,
 the report's suggested order is the plan.
+
+If the audit turns up that the suite's real conventions differ from the profile's
+`CONVENTIONS.md`, that is not an audit finding about the suite, it is a wrong
+profile. Run `/qa:profile`.

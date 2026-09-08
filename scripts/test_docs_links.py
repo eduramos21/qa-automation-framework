@@ -25,8 +25,13 @@ for name, text in sorted(pages.items()):
 
         target, _, fragment = href.partition("#")
 
-        if target in ("", "./"):
+        # "" is this page. "./" is the directory index, which is a different
+        # page unless you happen to be on it.
+        if target == "":
             page, page_ids = name, ids
+        elif target == "./":
+            page, page_ids = "index.html", set(
+                re.findall(r'\bid="([^"]+)"', pages["index.html"]))
         else:
             if target not in pages:
                 if not (DOCS / target).exists():
