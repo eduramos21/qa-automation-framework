@@ -16,7 +16,7 @@ npx playwright install chromium
 npx playwright test
 ```
 
-Six tests, about three seconds.
+Nine tests, about three seconds.
 
 ```bash
 npx playwright test --headed    # watch it
@@ -34,6 +34,10 @@ tests/auth.setup.ts      logs in once, saves storage state
 tests/anonymous/         tests of login itself, start logged out
 tests/signed-in/         everything else, handed a ready session
 ```
+
+`tests/signed-in/checkout.spec.ts` was generated from
+`../artifacts/CART-142-design.md`. The report on what it did and did not write is
+in `../artifacts/CART-142-generated.md`.
 
 ## The parts worth looking at
 
