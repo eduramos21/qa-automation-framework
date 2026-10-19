@@ -5,9 +5,16 @@
         "source": "github",
         "repo": "eduramos21/qa-automation-framework"
       }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "dietrichgebert/ponytail"
+      }
     }
   },
   "enabledPlugins": {
-    "qa@eduramos21-qa": true
+    "qa@eduramos21-qa": true,
+    "ponytail@ponytail": true
   }
 }
