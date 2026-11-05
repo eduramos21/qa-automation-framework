@@ -1,0 +1,23 @@
+# Lets a project add this repo as a pre-commit (https://pre-commit.com) hook
+# source without installing the Claude Code plugin at all:
+#
+#   repos:
+#     - repo: https://github.com/eduramos21/qa-automation-framework
+#       rev: <tag or commit>
+#       hooks:
+#         - id: qa-policy
+#           # optional, narrow to your own test_glob:
+#           # files: \.spec\.ts$
+#
+# Needs a qa.config.yml in the target repo with a policies.forbid list. See
+# skills/prevalidate/SKILL.md for the no-framework (husky, lint-staged, raw git
+# hook) path.
+- id: qa-policy
+  name: qa-policy (policies.forbid)
+  description: >-
+    Checks files about to be committed against policies.forbid in
+    qa.config.yml. Only lines this working tree added or changed are
+    reported, so a repo with pre-existing violations is not blocked on day one.
+  entry: bin/qa-policy --changed-only
+  language: script
+  pass_filenames: true

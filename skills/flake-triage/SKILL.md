@@ -83,15 +83,23 @@ outlives the outage and nobody remembers what it was for.
 
 ## The rerun protocol
 
-For an intermittent failure, one run tells you nothing. Before deciding anything:
+For an intermittent failure, one run tells you nothing. Before deciding anything,
+run `qa-rerun` instead of doing this by hand:
 
-```
-run it 10 times alone
-run it 10 times inside the full suite
-run it 10 times with parallelism turned up
+```bash
+qa-rerun path/to/spec.ts --title "adds an item to the cart" \
+  --suite "<your full-suite command>" \
+  --parallel "<your full-suite command, workers turned up>"
 ```
 
-Then read the pattern:
+It runs the test 10 times alone using `commands.test_one` from the profile, then
+10 times under each command you give it for `--suite` and `--parallel`, and
+prints the pass/fail pattern. There is no command shape for "in the suite" or
+"parallel" that holds across runners, so it does not guess at those two, it
+runs whatever you pass it. Leave them out to get just the "alone" signal.
+
+`qa-rerun` only produces the evidence. Reading what it means is still this
+skill's job, not the tool's:
 
 | Alone | In the suite | Parallel | Cause |
 |---|---|---|---|

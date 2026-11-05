@@ -185,6 +185,7 @@ python3 scripts/validate_profiles.py</code></pre>
       <tr><td><code>/qa:generate</code></td><td>Writes the automatable rows</td><td><code>test-author</code> past three rows</td></tr>
       <tr><td><code>/qa:fix</code></td><td>Triage then fix</td><td><code>test-maintainer</code> past three failures</td></tr>
       <tr><td><code>/qa:audit</code></td><td>Score and rank</td><td><code>suite-auditor</code>, always</td></tr>
+      <tr><td><code>/qa:prevalidate</code></td><td>Runs the policy check against what is staged, same rules as the edit hook</td><td>inline, it only reports</td></tr>
     </tbody>
   </table>
   </div>
@@ -199,7 +200,8 @@ python3 scripts/validate_profiles.py</code></pre>
     <tbody>
       <tr><td><code>qa-config</code></td><td>How to resolve the project setup and what to do when it fails. Every other skill leans on this</td></tr>
       <tr><td><code>test-design-techniques</code></td><td>Equivalence partitioning, boundary values, decision tables, state transitions, pairwise. Which technique for which shape of requirement, risk scoring, and choosing a layer</td></tr>
-      <tr><td><code>flake-triage</code></td><td>The five causes of a red test in the order they are actually likely, and the rerun protocol that tells a flake from a defect</td></tr>
+      <tr><td><code>flake-triage</code></td><td>The five causes of a red test in the order they are actually likely, and the rerun protocol (<code>qa-rerun</code> runs it) that tells a flake from a defect</td></tr>
+      <tr><td><code>prevalidate</code></td><td>Runs <code>qa-policy</code> against what is staged. Standalone outside Claude Code too, see <a href="setup.html#prevalidate">setup</a></td></tr>
       <tr><td><code>bug-report</code></td><td>A report shape that avoids the round trip, and how to file to the configured tracker</td></tr>
     </tbody>
   </table>
@@ -217,13 +219,14 @@ python3 scripts/validate_profiles.py</code></pre>
 <section class="section" id="tools">
   <h2>Tools and wiring</h2>
 
-  <h3>Two commands</h3>
+  <h3>Three commands</h3>
   <div class="prose">
-    <p>Both stdlib only Python, because they run on the critical path of every task and adding a <code>pip install</code> there would be a bad trade for a few fields of YAML.</p>
+    <p>All stdlib only Python, because they run on the critical path of every task and adding a <code>pip install</code> there would be a bad trade for a few fields of YAML. All three also run standalone, outside Claude Code, from a bare clone.</p>
   </div>
   <pre><code>qa-context [stack] [--paths]     resolve config + active profile + conventions
 qa-policy  &lt;file&gt;... | --stack   check against policies.forbid
-qa-policy  --changed-only &lt;file&gt; only lines this working tree added or changed</code></pre>
+qa-policy  --changed-only &lt;file&gt; only lines this working tree added or changed
+qa-rerun   &lt;file&gt; --title "..."  run a test N times alone/suite/parallel, read the pattern</code></pre>
 
   <h3>One hook</h3>
   <div class="prose">
@@ -247,7 +250,8 @@ qa-policy  --changed-only &lt;file&gt; only lines this working tree added or cha
   <h3>Checks</h3>
   <pre><code>python3 scripts/validate_profiles.py   every profile.yaml and every qa.config.yml
 python3 scripts/test_qa_context.py     the config parsing
-python3 scripts/test_qa_policy.py      that qa-policy fires on what it claims to</code></pre>
+python3 scripts/test_qa_policy.py      that qa-policy fires on what it claims to
+python3 scripts/test_qa_rerun.py       that qa-rerun resolves the right command and reads the pattern right</code></pre>
 
   <div class="prose">
     <p>All three run in CI, along with both web demo suites against the live site and a typecheck of the mobile example.</p>

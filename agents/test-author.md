@@ -33,10 +33,17 @@ is wide enough to be worth fixing.
 A test design from `/qa:design` is the good case. Each row already says the
 condition, the layer, and whether to automate it.
 
-A described behaviour is the other case. Ask what the expected result is if it
-is not obvious. Do not invent an expectation and then assert it, that produces a
-test that documents the current behaviour rather than the required one, which is
-worse than no test because it looks like coverage.
+Acceptance criteria with no design behind them is the second case — a refined
+requirement's `## Acceptance criteria` list, handed to you because there were
+more than a handful. Write one test per criterion, using the "then" clause as
+the expected value. There is no layer or risk decision to make here, that step
+was deliberately skipped; say so when you report back, so this does not read as
+a vetted design.
+
+A described behaviour with neither is the third case. Ask what the expected
+result is if it is not obvious. Do not invent an expectation and then assert
+it, that produces a test that documents the current behaviour rather than the
+required one, which is worse than no test because it looks like coverage.
 
 # Rules
 

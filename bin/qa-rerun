@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Run a test repeatedly and report the pattern flake-triage's rerun protocol
+asks for, instead of a human running it by hand and tallying the results.
+
+Usage:
+  qa-rerun <file> --title "<test title>" [--runs 10]
+  qa-rerun <file> --title "<test title>" --suite "<command>" --parallel "<command>"
+
+The "alone" command always comes from the active profile's commands.test_one,
+with {file} and {title} substituted, the same way qa-context resolves it.
+
+"In the suite" and "with parallelism turned up" have no form that is the same
+across runners, so this does not guess at them: pass the exact command for
+each with --suite / --parallel, or leave out the one you are not ready to run
+yet. Whatever command you give it, qa-rerun just runs it --runs times and
+counts pass against fail by exit code, so the limit is only a labelling one,
+not a this-tool-cannot-do-it one.
+
+This produces evidence, not a diagnosis. See the flake-triage skill for what
+each pattern actually means and what to do about it.
+
+Stdlib only. Same reason as qa-context and qa-policy: this runs on the
+critical path.
+"""
+
+import argparse
+import importlib.machinery
+import importlib.util
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+PLUGIN_ROOT = Path(__file__).resolve().parent
+
+_loader = importlib.machinery.SourceFileLoader("qa_context", str(PLUGIN_ROOT / "qa-context"))
+_spec = importlib.util.spec_from_loader("qa_context", _loader)
+qa_context = importlib.util.module_from_spec(_spec)
+_loader.exec_module(qa_context)
+
+
+def command_for(name, profile_text):
+    match = re.search(r"^\s*{}:\s*(.+)$".format(re.escape(name)), profile_text, re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def resolve_alone_command(file_path):
+    """commands.test_one from whichever resolved profile defines it."""
+    config = qa_context.find_config(file_path.resolve().parent)
+    if config is None:
+        return None, "No qa.config.yml found above {}".format(file_path)
+    config_dir = config.parent
+    stacks = qa_context.stacks_in(config.read_text())
+    if not stacks:
+        return None, "{} declares no stacks".format(config)
+    for profile_name in stacks.values():
+        profile_dir = qa_context.find_profile(profile_name, config_dir)
+        if profile_dir is None:
+            continue
+        template = command_for("test_one", (profile_dir / "profile.yaml").read_text())
+        if template:
+            return template, None
+    return None, "No commands.test_one found in any profile {} resolves to".format(config)
+
+
+def run_n(command, runs, cwd):
+    results = []
+    for _ in range(runs):
+        done = subprocess.run(command, shell=True, cwd=str(cwd),
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        results.append(done.returncode == 0)
+    return results
+
+
+def summarize(label, results):
+    passed = sum(results)
+    failed = len(results) - passed
+    pattern = "".join("." if r else "x" for r in results)
+    print("{:<10} {} passed, {} failed  ({})".format(label, passed, failed, pattern))
+    return failed == 0
+
+
+def verdict(alone_clean, suite_clean, parallel_clean):
+    if suite_clean is None and parallel_clean is None:
+        if alone_clean:
+            return ("Passed every time alone. That only clears 'broken alone', not "
+                     "'flaky together' - pass --suite and --parallel to go further.")
+        return ("Failed alone, every run. That alone already points at cause 1 or 2 "
+                 "(a real difference) - confirm by checking what changed, not by "
+                 "running it more.")
+
+    rows = [
+        (alone_clean is False and suite_clean is False and parallel_clean is False,
+         "Fails alone, fails in the suite, fails parallel -> cause 1 or 2, a real "
+         "difference."),
+        (alone_clean is True and suite_clean is False and parallel_clean is False,
+         "Passes alone, fails in the suite, fails parallel -> cause 4, isolation."),
+        (alone_clean is True and suite_clean is True and parallel_clean is False,
+         "Passes alone, passes in the suite, fails parallel -> cause 3 or 4, timing "
+         "under load."),
+        (alone_clean is True and suite_clean is True and parallel_clean is True,
+         "Passes everywhere -> cause 5, or it is already fixed. Check what changed."),
+    ]
+    for matched, message in rows:
+        if matched:
+            return message
+    return "Mixed pattern outside flake-triage's four rows. Read the raw counts yourself."
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("file", type=Path)
+    parser.add_argument("--title", required=True, help="the test title/name")
+    parser.add_argument("--runs", type=int, default=10)
+    parser.add_argument("--suite", help="command to run the test inside the full suite")
+    parser.add_argument("--parallel", help="command to run it with parallelism turned up")
+    args = parser.parse_args()
+
+    template, error = resolve_alone_command(args.file)
+    if error:
+        print(error, file=sys.stderr)
+        return 2
+
+    alone_command = template.replace("{file}", str(args.file)).replace("{title}", args.title)
+    cwd = Path.cwd()
+
+    print("alone:    {}".format(alone_command))
+    alone_clean = summarize("alone", run_n(alone_command, args.runs, cwd))
+
+    suite_clean = None
+    if args.suite:
+        print("suite:    {}".format(args.suite))
+        suite_clean = summarize("suite", run_n(args.suite, args.runs, cwd))
+
+    parallel_clean = None
+    if args.parallel:
+        print("parallel: {}".format(args.parallel))
+        parallel_clean = summarize("parallel", run_n(args.parallel, args.runs, cwd))
+
+    print()
+    print(verdict(alone_clean, suite_clean, parallel_clean))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

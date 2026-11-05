@@ -234,6 +234,25 @@ qa-policy --stack web
 # only what this edit introduced, which is what the hook uses
 qa-policy --changed-only path/to/spec.ts</code></pre>
 
+  <h3 id="prevalidate">Running the check at commit time, without the plugin</h3>
+  <div class="prose">
+    <p><code>qa-policy</code> is a standalone, stdlib only Python 3 script. It does not need Claude Code, the plugin, or anything installed beyond Python to run &mdash; the <code>--hook</code> flag is the only part coupled to the edit hook's JSON. A developer who wants just this check can pull it on its own.</p>
+    <p>Add this repo as a <a href="https://pre-commit.com">pre-commit</a> hook source:</p>
+  </div>
+  <pre><code># .pre-commit-config.yaml, in the target project
+repos:
+  - repo: https://github.com/eduramos21/qa-automation-framework
+    rev: &lt;tag or commit&gt;
+    hooks:
+      - id: qa-policy</code></pre>
+  <div class="prose">
+    <p>Or wire it into husky, lint-staged, or a raw git hook directly, since it is just a script that takes staged file paths as arguments:</p>
+  </div>
+  <pre><code>bin/qa-policy --changed-only &lt;staged files&gt;</code></pre>
+  <div class="note">
+    Either way the target repo still needs a <code>qa.config.yml</code> with a <code>policies.forbid</code> list &mdash; that is what <code>qa-policy</code> checks against. A bare <code>policies:</code> block with no <code>stacks:</code> is enough, the rest of the setup here is not required. With the plugin installed, the same thing is <code>/qa:prevalidate</code>.
+  </div>
+
   <h3>A monorepo with several suites</h3>
   <pre><code>stacks:
   web:    { profile: acme-web,    root: apps/web/e2e/ }

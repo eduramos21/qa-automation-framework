@@ -100,6 +100,7 @@ To try it without installing, `claude --plugin-dir .` from a clone.
 | `/qa:fix` | Triages through five causes before changing anything, fixes the cause once | edits, plus what it found and did not fix |
 | `/qa:audit` | Nine area rubric with evidence, findings ranked by cost over effort | `qa/audit/<date>.md` |
 | `/qa:profile` | Reads a suite that already exists and writes down its house style | `<project>/profiles/<name>/` |
+| `/qa:prevalidate` | Runs the policy check against what is staged, the same rules the edit hook enforces | pass/fail plus violations by file and line |
 
 ## If your repo already has tests
 
@@ -139,6 +140,13 @@ only on lines an edit actually touched, so editing a file that already contains
 three sleeps, for an unrelated reason, reports nothing. Adding a new sleep
 reports that one. Pre-existing ones stay an audit finding, which is where a
 decision about them belongs.
+
+The same check runs at commit time, not just on every edit, and does not need
+the plugin installed to do it. `bin/qa-policy` is a standalone stdlib Python
+script; add `.pre-commit-hooks.yaml` at this repo's root as a
+[pre-commit](https://pre-commit.com) hook source, or wire `bin/qa-policy
+--changed-only` into husky, lint-staged, or a raw git hook directly. See
+`skills/prevalidate/SKILL.md`, or `/qa:prevalidate` if you do have the plugin.
 
 ## Try the demos
 
@@ -213,7 +221,7 @@ is noticing that the decisions have not been acted on since.
 .claude-plugin/     plugin manifest and marketplace entry
 agents/             test-author, test-maintainer, suite-auditor
 skills/             the workflows and the reference skills
-bin/                qa-context, qa-policy
+bin/                qa-context, qa-policy, qa-rerun
 hooks/              one PostToolUse hook, blocks forbidden patterns on write
 profiles/           ts-playwright, py-pytest-playwright, mobile-appium-wdio, _template
 examples/           three runnable projects, plus the artifacts above
