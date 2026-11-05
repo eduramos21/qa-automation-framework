@@ -167,7 +167,7 @@ emulator. It is typechecked in CI but not run there, because there is no device
 on a GitHub runner, and its README says so rather than implying a green run it
 has not had.
 
-## A worked example, end to end
+## An end to end example
 
 `examples/artifacts/` holds one ticket taken all the way through, against the
 same site the demo suites test. Every number in it was checked against the
@@ -239,10 +239,6 @@ python3 scripts/validate_profiles.py
 
 Then point a project at it with `stacks.web.profile: java-selenium-junit5`. No
 agent changes.
-
-Java plus Selenium plus JUnit 5 is deliberately not shipped. It is the obvious
-next profile, and writing it from the template is the fastest way to find out
-whether this design holds up.
 
 ## Phases
 
