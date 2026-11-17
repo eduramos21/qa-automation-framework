@@ -10,26 +10,31 @@ something and not writing it down.
 
 ## Steps
 
-**1. Reproduce it.** From a clean state, following your own steps. If you cannot,
+**1. Classify it.** Functional or API. API if the input is a failing request:
+status code, endpoint, response body, a cURL, a Postman/HAR export, or a test
+that hit a client directly. Functional otherwise. This decides which shape you
+fill in below, not how you investigate.
+
+**2. Reproduce it.** From a clean state, following your own steps. If you cannot,
 say so in the report and say how many times you tried. An intermittent bug is
 still worth filing, but it has to be labelled as one or someone will close it as
 not reproducible.
 
-**2. Narrow it.** Cut every step that is not needed. Ten steps become four.
+**3. Narrow it.** Cut every step that is not needed. Ten steps become four.
 Then ask which is the real variable: does it happen with a different account, a
-different browser, a different amount? The answer usually points at the cause and
-saves the developer the search.
+different browser, a different amount, a different payload field? The answer
+usually points at the cause and saves the developer the search.
 
-**3. Check it is new.** Search the tracker before filing. A duplicate splits the
+**4. Check it is new.** Search the tracker before filing. A duplicate splits the
 discussion across two tickets.
 
-**4. Work out what it costs.** Not how annoying it is. How many users, how often,
+**5. Work out what it costs.** Not how annoying it is. How many users, how often,
 what happens if it ships, and whether there is a workaround. That is what someone
 prioritises on.
 
-**5. Write it.** Shape below.
+**6. Write it.** Functional shape or API shape below, per step 1.
 
-**6. File it.** Per `tracker` in `qa.config.yml`:
+**7. File it.** Per `tracker` in `qa.config.yml`:
 
 - `jira`: create the issue with the Atlassian tools, in `tracker.project_key`.
 - `github-issues`: `gh issue create`.
@@ -39,6 +44,8 @@ Attach what you have: screenshot, trace, video, the failing test output, the
 network log if the failure is a request.
 
 ## Shape
+
+Functional, when step 1 classified it that way:
 
 ```markdown
 # <One line. What is wrong, where. Not "checkout broken">
@@ -71,6 +78,40 @@ it.
 
 What you ruled out. Other browsers, other accounts, whether it survives a
 refresh, when it started. This is the section that saves the round trip.
+```
+
+API, when step 1 classified it that way:
+
+```markdown
+# <One line. What is wrong, which endpoint. Not "API broken">
+
+**Environment:** <base URL or build, env, date>
+**Frequency:** every time | <n> times out of <m> | seen once
+
+## Request
+
+`<METHOD> <path>`
+
+Headers and body that matter (strip auth tokens and secrets, note that you did).
+
+## Expected
+
+<Status and body, and where that comes from: the API contract, an existing
+response, a convention. If you are guessing, say so.>
+
+## Actual
+
+<Exact status code and exact response body.>
+
+## Impact
+
+Who hits this, how often, what it costs them, and whether there is a way around
+it.
+
+## Notes
+
+What you ruled out. A different payload, a different account, whether it
+survives a retry, when it started.
 ```
 
 ## Rules
